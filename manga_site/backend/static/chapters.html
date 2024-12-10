@@ -63,6 +63,7 @@
 
         .comic-info {
             display: flex;
+            flex-direction: column;
             gap: 20px;
             background: white;
             padding: 20px;
@@ -76,6 +77,7 @@
             height: 300px;
             object-fit: cover;
             border-radius: 4px;
+            align-self: center;
         }
 
         .comic-details {
@@ -86,11 +88,13 @@
             font-size: 24px;
             font-weight: bold;
             margin-bottom: 10px;
+            text-align: center;
         }
 
         .comic-author {
             color: #666;
             margin-bottom: 15px;
+            text-align: center;
         }
 
         .comic-description {
@@ -235,7 +239,7 @@
 
         .reading-progress {
             margin-top: 15px;
-            padding: 10px;
+            padding: 15px;
             background: #f8fafc;
             border-radius: 6px;
         }
@@ -259,6 +263,20 @@
 
         .continue-btn:hover {
             background: #2563eb;
+        }
+
+        @media screen and (min-width: 768px) {
+            .comic-info {
+                flex-direction: row;
+            }
+            
+            .comic-cover {
+                align-self: flex-start;
+            }
+            
+            .comic-title, .comic-author {
+                text-align: left;
+            }
         }
     </style>
 </head>
