@@ -335,7 +335,7 @@
     <header class="header" id="header">
         <div class="header-content">
             <div class="nav-menu">
-                <a href="javascript:history.back()" class="nav-link">返回目录</a>
+                <a href="#" class="nav-link">返回目录</a>
                 <div class="chapter-info">
                     <span id="comicTitle"></span>
                     <span id="chapterTitle"></span>
@@ -383,42 +383,217 @@
         const urlParams = new URLSearchParams(window.location.search);
         const chapterId = urlParams.get('chapter_id');
         let currentChapter = null;
-        let lastScrollPosition = 0;
-        let headerTimeout;
-        let lastScrollY = 0;
-        let ticking = false;
         let settingsTimeout;
-        let chaptersData = [];
-        let isLoading = false;
-        let currentChapterIndex = 0;
+        let needRestoreProgress = true;  // 标记是否需要恢复进度
 
-        // 控制头部显示/隐藏
-        function handleScroll() {
-            lastScrollY = window.scrollY;
-            
-            if (!ticking) {
-                window.requestAnimationFrame(() => {
-                    const header = document.getElementById('header');
-                    
-                    // 向下滚动超过50px时隐藏header
-                    if (lastScrollY > 50 && lastScrollY > lastKnownScrollY) {
-                        header.classList.add('hidden');
-                    } else {
-                        header.classList.remove('hidden');
+        // 修改加载章节数据的函数
+        async function loadChapterData() {
+            if (!chapterId) return;
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/chapters/${chapterId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
                     }
-                    
-                    lastKnownScrollY = lastScrollY;
-                    ticking = false;
-                    
-                    // 保存阅读进度
-                    saveReadingProgress();
                 });
                 
-                ticking = true;
+                if (response.ok) {
+                    currentChapter = await response.json();
+                    
+                    // 更新章节标题
+                    document.getElementById('comicTitle').textContent = currentChapter.comic_title || '';
+                    document.getElementById('chapterTitle').textContent = currentChapter.title || '';
+                    
+                    // 更新返回目录链接 - 改为跳转到章节目录页
+                    const backLink = document.querySelector('.nav-link');
+                    if (backLink) {
+                        backLink.href = `/static/chapters.html?comic_id=${currentChapter.comic_id}`;
+                    }
+                    
+                    // 加载章节列表
+                    await loadChapterList();
+                    // 更新导航按钮
+                    updateNavigationButtons();
+                    return currentChapter;
+                }
+            } catch (error) {
+                console.error('Error loading chapter:', error);
             }
         }
 
-        // 加载章节图片
+        // 修改章节列表加载函数
+        async function loadChapterList() {
+            if (!currentChapter || !currentChapter.comic_id) return;
+            
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/comics/${currentChapter.comic_id}/chapters`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    chaptersData = await response.json();
+                    console.log('Chapters data:', chaptersData); // 调试用
+                    
+                    // 找到当前章节的索引
+                    currentChapterIndex = chaptersData.findIndex(chapter => chapter.id === parseInt(chapterId));
+                    
+                    // 更新章节选择器
+                    const select = document.getElementById('chapterSelect');
+                    select.innerHTML = '';
+                    
+                    chaptersData.forEach(chapter => {
+                        const option = document.createElement('option');
+                        option.value = chapter.id;
+                        option.textContent = chapter.title;
+                        option.selected = chapter.id === parseInt(chapterId);
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading chapters:', error);
+            }
+        }
+
+        // 修改导航按钮更新函数
+        function updateNavigationButtons() {
+            if (!chaptersData || !currentChapterIndex) return;
+            
+            const prevButton = document.getElementById('prevButton');
+            const nextButton = document.getElementById('nextButton');
+            
+            console.log('Updating navigation buttons:', currentChapterIndex, chaptersData.length); // 调试用
+            
+            // 检查是否有上一章
+            if (currentChapterIndex > 0) {
+                prevButton.disabled = false;
+                prevButton.onclick = () => {
+                    const prevChapter = chaptersData[currentChapterIndex - 1];
+                    window.location.href = `/static/reader.html?chapter_id=${prevChapter.id}`;
+                };
+            } else {
+                prevButton.disabled = true;
+            }
+            
+            // 检查是否有下一章
+            if (currentChapterIndex < chaptersData.length - 1) {
+                nextButton.disabled = false;
+                nextButton.onclick = () => {
+                    const nextChapter = chaptersData[currentChapterIndex + 1];
+                    window.location.href = `/static/reader.html?chapter_id=${nextChapter.id}`;
+                };
+            } else {
+                nextButton.disabled = true;
+            }
+        }
+
+        // 修改章节选择事件处理
+        document.getElementById('chapterSelect').addEventListener('change', function(e) {
+            e.stopPropagation();  // 防止触发隐藏
+            const selectedChapterId = this.value;
+            if (selectedChapterId) {
+                window.location.href = `/static/reader.html?chapter_id=${selectedChapterId}`;
+            }
+        });
+
+        // 修改点击处理函数
+        function handleClick(event) {
+            const settings = document.getElementById('readerSettings');
+            const header = document.getElementById('header');
+            const navigation = document.getElementById('chapterNavigation');
+            
+            // 检查是否点击了控制元素
+            if (settings.contains(event.target) || 
+                header.contains(event.target) || 
+                navigation.contains(event.target)) {
+                return;
+            }
+
+            // 显示/隐藏所有控制元素
+            const elements = [settings, header, navigation];
+            const isHidden = settings.style.display === 'none';
+            
+            elements.forEach(el => {
+                el.style.display = isHidden ? (el === settings ? 'flex' : 'block') : 'none';
+            });
+
+            // 设置自动隐藏定时器
+            clearTimeout(settingsTimeout);
+            if (isHidden) {
+                settingsTimeout = setTimeout(() => {
+                    elements.forEach(el => {
+                        el.style.display = 'none';
+                    });
+                }, 3000);
+            }
+        }
+
+        // 恢复阅读进度
+        function restoreReadingProgress() {
+            const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
+            if (progress[currentChapter.comic_id]) {
+                const chapterProgress = progress[currentChapter.comic_id];
+                if (chapterProgress.chapterId === parseInt(chapterId)) {
+                    const scrollPosition = (chapterProgress.scrollPosition / 100) * 
+                        (document.documentElement.scrollHeight - window.innerHeight);
+                    window.scrollTo({
+                        top: scrollPosition,
+                        behavior: 'instant' // 使用 'instant' 避免看到滚动过程
+                    });
+                }
+            }
+        }
+
+        // 修改页面加载时的初始化顺序
+        window.addEventListener('load', async () => {
+            if (!chapterId) {
+                console.error('No chapter ID provided');
+                return;
+            }
+
+            try {
+                await loadChapterData();
+                await loadChapterImages(chapterId);
+                
+                // 初始化控制元素显示
+                const elements = [
+                    document.getElementById('readerSettings'),
+                    document.getElementById('header'),
+                    document.getElementById('chapterNavigation')
+                ];
+                
+                elements.forEach(el => {
+                    if (el) el.style.display = 'none';
+                });
+                
+                // 恢复图片宽度设置
+                const savedWidth = localStorage.getItem('mangaImageWidth') || '400';
+                const widthSlider = document.getElementById('imageWidth');
+                if (widthSlider) {
+                    widthSlider.value = savedWidth;
+                    updateWidthLabel(savedWidth);
+                    changeImageWidth(savedWidth);
+                }
+
+                // 添加事件监听
+                document.addEventListener('click', handleClick);
+                let scrollTimeout;
+                window.addEventListener('scroll', () => {
+                    clearTimeout(scrollTimeout);
+                    scrollTimeout = setTimeout(() => {
+                        if (currentChapter) {
+                            saveReadingProgress(chapterId, currentChapter.title);
+                        }
+                    }, 100);
+                });
+            } catch (error) {
+                console.error('Error during initialization:', error);
+            }
+        });
+
+        // 修改加载图片函数
         async function loadChapterImages(chapterId) {
             const token = localStorage.getItem('token');
             try {
@@ -431,80 +606,96 @@
                 if (response.ok) {
                     const chapterData = await response.json();
                     const container = document.getElementById('readerContainer');
+                    container.innerHTML = ''; // 清空容器
 
-                    // 添加章节过渡字段
-                    const transition = document.createElement('div');
-                    transition.className = 'chapter-transition';
-                    transition.textContent = chapterData.title;
-                    container.appendChild(transition);
+                    // 获取保存的进度
+                    const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
+                    const savedProgress = progress[currentChapter.comic_id];
+                    const savedScrollPercent = savedProgress && 
+                                             savedProgress.chapterId === parseInt(chapterId) ? 
+                                             savedProgress.scrollPosition : 0;
 
-                    // 加载图片
+                    // 添加图片
                     if (Array.isArray(chapterData.images) && chapterData.images.length > 0) {
-                        chapterData.images.forEach((imageUrl, index) => {
-                            if (imageUrl && typeof imageUrl === 'string') {
-                                const img = document.createElement('img');
-                                img.src = imageUrl;
-                                img.className = 'manga-image';
-                                img.alt = `第${index + 1}页`;
-                                img.loading = 'lazy';
-                                img.style.width = `${localStorage.getItem('mangaImageWidth') || '400'}px`;
-                                img.onerror = function() {
-                                    console.error(`Failed to load image: ${imageUrl}`);
-                                    this.src = '/static/images/error.png';
-                                };
-                                container.appendChild(img);
-                            }
+                        const imagePromises = chapterData.images.map((imageUrl, index) => {
+                            return new Promise((resolve) => {
+                                if (imageUrl && typeof imageUrl === 'string') {
+                                    const img = document.createElement('img');
+                                    img.src = imageUrl;
+                                    img.className = 'manga-image';
+                                    img.alt = `第${index + 1}页`;
+                                    img.loading = 'lazy';
+                                    img.style.width = `${localStorage.getItem('mangaImageWidth') || '400'}px`;
+                                    
+                                    img.onload = () => {
+                                        resolve();
+                                        // 在第一张图片加载完成后，计算并滚动到保存的位置
+                                        if (needRestoreProgress && index === 0) {
+                                            setTimeout(() => {
+                                                const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+                                                const scrollPosition = (savedScrollPercent / 100) * totalHeight;
+                                                window.scrollTo({
+                                                    top: scrollPosition,
+                                                    behavior: 'instant'
+                                                });
+                                                needRestoreProgress = false;  // 防止重复滚动
+                                            }, 100);
+                                        }
+                                    };
+                                    
+                                    img.onerror = function() {
+                                        this.src = '/static/images/error.svg';
+                                        this.style.background = '#f5f5f5';
+                                        resolve();
+                                    };
+                                    
+                                    container.appendChild(img);
+                                } else {
+                                    resolve();
+                                }
+                            });
                         });
+
+                        // 等待所有图片开始加载
+                        await Promise.all(imagePromises);
                     } else {
                         container.innerHTML += '<div class="error">本章节暂无图片</div>';
                     }
-
-                    // 更新当前章节索引
-                    currentChapterIndex++;
-                    isLoading = false;
-                } else {
-                    console.error('Failed to load chapter:', await response.json());
                 }
             } catch (error) {
                 console.error('Error:', error);
             }
         }
 
-        // 无限滚动加载
-        function handleScroll() {
-            if (isLoading) return;
-
-            const scrollPosition = window.scrollY + window.innerHeight;
-            const containerHeight = document.documentElement.scrollHeight;
-
-            if (scrollPosition >= containerHeight - 100) {
-                isLoading = true;
-                const nextChapterId = getNextChapterId();
-                if (nextChapterId) {
-                    loadChapterImages(nextChapterId);
-                }
+        // 修改保存进度函数
+        function saveReadingProgress(chapterId, chapterTitle) {
+            if (!currentChapter || !currentChapter.comic_id) return;
+            
+            const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
+            const scrollPosition = window.scrollY;
+            const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercent = totalHeight > 0 ? Math.round((scrollPosition / totalHeight) * 100) : 0;
+            
+            if (!progress[currentChapter.comic_id]) {
+                progress[currentChapter.comic_id] = {
+                    readChapters: []
+                };
             }
-        }
-
-        // 获取下一个章节ID
-        function getNextChapterId() {
-            if (currentChapterIndex < chaptersData.length) {
-                return chaptersData[currentChapterIndex].id;
+            
+            progress[currentChapter.comic_id] = {
+                ...progress[currentChapter.comic_id],
+                chapterId: parseInt(chapterId),
+                chapterTitle: chapterTitle,
+                scrollPosition: scrollPercent,
+                timestamp: new Date().toISOString()
+            };
+            
+            if (!progress[currentChapter.comic_id].readChapters.includes(parseInt(chapterId))) {
+                progress[currentChapter.comic_id].readChapters.push(parseInt(chapterId));
             }
-            return null;
+            
+            localStorage.setItem('readingProgress', JSON.stringify(progress));
         }
-
-        // 页面加载时执行
-        window.addEventListener('load', async () => {
-            // 加载初始章节
-            await loadChapterImages(chapterId);
-
-            // 加载章节列表
-            await loadChapterList();
-
-            // 添加滚动监听
-            window.addEventListener('scroll', handleScroll);
-        });
 
         async function updateNavigationButtons() {
             const token = localStorage.getItem('token');
@@ -580,97 +771,10 @@
             }
         });
 
-        // 监听滚动事件
-        window.addEventListener('scroll', handleScroll);
-
-        // 页面加载完成后执行
-        window.addEventListener('load', () => {
-            restoreReadingPosition();
-            const savedWidth = localStorage.getItem('mangaImageWidth') || '400';
-            const widthSlider = document.getElementById('imageWidth');
-            widthSlider.value = savedWidth;
-            updateWidthLabel(savedWidth);
-            changeImageWidth(savedWidth);
-            
-            // 添加点击监听
-            document.addEventListener('click', handleClick);
-            
-            // 移除之前的滚动监听（因为现在通过点击控制）
-            window.removeEventListener('scroll', handleScroll);
-            
-            // 初始隐藏设置面板
-            document.getElementById('readerSettings').style.display = 'none';
-        });
-
         // 防止设置面板内部点击触发隐藏
         document.getElementById('readerSettings').addEventListener('click', function(event) {
             event.stopPropagation();
         });
-
-        // 加载章节列表
-        async function loadChapterList() {
-            const token = localStorage.getItem('token');
-            try {
-                const response = await fetch(`/api/comics/${currentChapter.comic_id}/chapters`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                
-                if (response.ok) {
-                    chaptersData = await response.json();
-                    const select = document.getElementById('chapterSelect');
-                    select.innerHTML = '';
-                    
-                    chaptersData.forEach(chapter => {
-                        const option = document.createElement('option');
-                        option.value = chapter.id;
-                        option.textContent = chapter.title;
-                        option.selected = chapter.id === currentChapter.id;
-                        select.appendChild(option);
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading chapters:', error);
-            }
-        }
-
-        // 章节选择变更处理
-        document.getElementById('chapterSelect').addEventListener('change', function(e) {
-            e.stopPropagation();  // 防止触发隐藏
-            const chapterId = this.value;
-            window.location.href = `/static/reader.html?chapter_id=${chapterId}`;
-        });
-
-        // 点击处理
-        function handleClick(event) {
-            const settings = document.getElementById('readerSettings');
-            const header = document.getElementById('header');
-            const navigation = document.getElementById('chapterNavigation');
-            
-            // 检查是否点击了设置面板或导航按钮内部
-            if (settings.contains(event.target) || navigation.contains(event.target)) {
-                return;
-            }
-
-            // 显示/隐藏所有控制元素
-            const elements = [settings, header, navigation];
-            const isHidden = settings.style.display === 'none';
-            
-            elements.forEach(el => {
-                el.style.display = isHidden ? (el === settings ? 'flex' : 'block') : 'none';
-            });
-
-            // 设置自动隐藏定时器
-            clearTimeout(settingsTimeout);
-            if (isHidden) {
-                settingsTimeout = setTimeout(() => {
-                    elements.forEach(el => {
-                        el.style.display = 'none';
-                    });
-                }, 3000);
-            }
-        }
 
         // 防止导航按钮点击触发隐藏
         document.getElementById('chapterNavigation').addEventListener('click', function(event) {

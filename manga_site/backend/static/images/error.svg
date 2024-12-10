@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" version="1.1" xmlns="http://www.w3.org/2000/svg">
+    <!-- 背景圆圈 -->
+    <circle cx="100" cy="100" r="90" fill="none" stroke="#666666" stroke-width="8"/>
+    
+    <!-- 感叹号 -->
+    <g fill="#666666">
+        <!-- 感叹号的点 -->
+        <circle cx="100" cy="150" r="10"/>
+        <!-- 感叹号的竖线 -->
+        <rect x="90" y="50" width="20" height="80" rx="10"/>
+    </g>
+    
+    <!-- 错误提示文字 -->
+    <text x="100" y="190" 
+          font-family="Arial, sans-serif" 
+          font-size="14" 
+          fill="#666666" 
+          text-anchor="middle">
+        图片加载失败
+    </text>
+</svg> 
