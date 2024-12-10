@@ -548,6 +548,28 @@
 
         // 修改页面加载时的初始化顺序
         window.addEventListener('load', async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/static/login.html';
+                return;
+            }
+
+            // 验证 token 有效性
+            try {
+                const response = await fetch('/api/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error('Token invalid');
+                }
+            } catch (error) {
+                localStorage.removeItem('token');
+                window.location.href = '/static/login.html';
+                return;
+            }
+            
             if (!chapterId) {
                 console.error('No chapter ID provided');
                 return;

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -6,8 +6,9 @@ from app.models.user import User, UserRole
 from app.core import security
 from app.core.config import settings
 from app.core.deps import get_current_active_user
-from typing import Any
+from typing import Any, Optional
 from pydantic import BaseModel
+from datetime import timedelta
 
 router = APIRouter()
 
@@ -78,9 +79,10 @@ def register_admin(
     return {"msg": "管理员注册成功"}
 
 @router.post("/login")
-def login(
-    db: Session = Depends(get_db),
-    form_data: OAuth2PasswordRequestForm = Depends()
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    token_duration: Optional[int] = Form(default=1),
+    db: Session = Depends(get_db)
 ) -> Any:
     """
     用户登录
@@ -97,8 +99,14 @@ def login(
             detail="用户名或密码错误"
         )
     
+    # 使用用户选择的token有效期
+    access_token_expires = timedelta(days=token_duration)
+    
     return {
-        "access_token": security.create_access_token(user.id),
+        "access_token": security.create_access_token(
+            user.id,
+            expires_delta=access_token_expires
+        ),
         "token_type": "bearer"
     }
 
