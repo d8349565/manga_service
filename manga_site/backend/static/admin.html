@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漫画管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .chapter-images {
+            margin-top: 10px;
+        }
+
+        .image-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .add-image-btn,
+        .remove-image-btn,
+        .upload-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .add-image-btn {
+            background: #2196F3;
+            color: white;
+        }
+
+        .remove-image-btn {
+            background: #ff4444;
+            color: white;
+        }
+
+        .upload-btn {
+            background: #4CAF50;
+            color: white;
+            font-size: 16px;
+            padding: 10px 20px;
+        }
+
+        .preview {
+            max-width: 200px;
+            margin-top: 10px;
+        }
+
+        .error {
+            color: #ff4444;
+            margin-top: 5px;
+        }
+
+        .success {
+            color: #4CAF50;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>添加新漫画</h1>
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="title">漫画名称</label>
+                <input type="text" id="title" required>
+            </div>
+            <div class="form-group">
+                <label for="author">作者</label>
+                <input type="text" id="author" required>
+            </div>
+            <div class="form-group">
+                <label for="description">描述</label>
+                <textarea id="description" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="coverUrl">封面图片链接</label>
+                <input type="text" id="coverUrl" required>
+                <img id="coverPreview" class="preview" style="display: none;">
+            </div>
+            <div class="form-group">
+                <label>第一章图片链接</label>
+                <div id="chapterImages" class="chapter-images">
+                    <div class="image-input">
+                        <input type="text" placeholder="图片链接" required>
+                        <button type="button" class="remove-image-btn">删除</button>
+                    </div>
+                </div>
+                <button type="button" class="add-image-btn" onclick="addImageInput()">添加图片链接</button>
+            </div>
+            <div id="uploadStatus"></div>
+            <button type="submit" class="upload-btn">添加漫画</button>
+        </form>
+    </div>
+
+    <script>
+        // 预览封面图片
+        document.getElementById('coverUrl').addEventListener('input', function(e) {
+            const url = e.target.value;
+            const preview = document.getElementById('coverPreview');
+            if (url) {
+                preview.src = url;
+                preview.style.display = 'block';
+                preview.onerror = function() {
+                    preview.style.display = 'none';
+                }
+            } else {
+                preview.style.display = 'none';
+            }
+        });
+
+        // 添加图片链接输入框
+        function addImageInput() {
+            const container = document.getElementById('chapterImages');
+            const div = document.createElement('div');
+            div.className = 'image-input';
+            div.innerHTML = `
+                <input type="text" placeholder="图片链接" required>
+                <button type="button" class="remove-image-btn" onclick="this.parentElement.remove()">删除</button>
+            `;
+            container.appendChild(div);
+        }
+
+        // 上传表单
+        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const imageInputs = document.querySelectorAll('#chapterImages input[type="text"]');
+            const chapterImages = Array.from(imageInputs).map(input => input.value);
+            
+            const comicData = {
+                title: document.getElementById('title').value,
+                author: document.getElementById('author').value,
+                description: document.getElementById('description').value,
+                cover_url: document.getElementById('coverUrl').value,
+                chapter_images: chapterImages
+            };
+
+            const status = document.getElementById('uploadStatus');
+            
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/comics', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(comicData)
+                });
+
+                if (response.ok) {
+                    status.textContent = '添加成功！';
+                    status.className = 'success';
+                    setTimeout(() => {
+                        window.location.href = '/static/comics.html';
+                    }, 2000);
+                } else {
+                    const error = await response.json();
+                    status.textContent = error.detail || '添加失败';
+                    status.className = 'error';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                status.textContent = '添加出错，请稍后重试';
+                status.className = 'error';
+            }
+        });
+    </script>
+</body>
+</html> 

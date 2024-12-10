@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漫画章节</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .header {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #333;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .nav-link:hover {
+            background-color: #f5f5f5;
+        }
+
+        .main-content {
+            max-width: 1200px;
+            margin: 80px auto 20px;
+            padding: 20px;
+        }
+
+        .comic-info {
+            display: flex;
+            gap: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .comic-cover {
+            width: 200px;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .comic-details {
+            flex: 1;
+        }
+
+        .comic-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .comic-author {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .comic-description {
+            color: #444;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .chapters-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .chapter-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid #edf2f7;
+            text-align: center;
+        }
+
+        .chapter-item:hover {
+            background: #f8fafc;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .chapter-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #2d3748;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .chapter-number {
+            color: #718096;
+            font-size: 12px;
+            font-weight: normal;
+        }
+
+        .chapter-item.read {
+            background: #f8fafc;
+        }
+
+        .chapter-item.read .chapter-title {
+            color: #64748b;
+        }
+
+        .chapter-item.new::after {
+            content: 'NEW';
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #48bb78;
+            color: white;
+            font-size: 10px;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .admin-controls {
+            margin-top: 8px;
+            display: none;
+            gap: 4px;
+            justify-content: center;
+        }
+
+        .chapter-item:hover .admin-controls {
+            display: flex;
+        }
+
+        .admin-btn {
+            padding: 3px 8px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+
+        .admin-btn:hover {
+            opacity: 1;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .error {
+            color: #ff4757;
+            padding: 20px;
+            text-align: center;
+            background: #ffe5e7;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+
+        .sort-control {
+            margin: 20px 0;
+            text-align: right;
+        }
+
+        .sort-btn {
+            background: white;
+            border: 1px solid #e2e8f0;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #4a5568;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .sort-btn:hover {
+            background: #f8fafc;
+            border-color: #cbd5e0;
+        }
+
+        #sortIcon {
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+
+        .sort-btn[data-order="desc"] #sortIcon {
+            transform: rotate(180deg);
+        }
+
+        .reading-progress {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 6px;
+        }
+
+        .last-read {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .continue-btn {
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .continue-btn:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <nav class="nav-menu">
+                <a href="/static/comics.html" class="nav-link">返回首页</a>
+                <a href="/static/favorites.html" class="nav-link">收藏</a>
+                <a href="/static/history.html" class="nav-link">历史</a>
+                <a href="/static/admin.html" class="nav-link admin-only" style="display: none;">管理</a>
+            </nav>
+            <div class="user-profile">
+                <div class="user-avatar" id="userAvatar"></div>
+                <span id="userName"></span>
+                <span id="adminBadge" class="admin-badge" style="display: none;">管理员</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="comic-info">
+            <img id="comicCover" src="" alt="封面" class="comic-cover">
+            <div class="info-text">
+                <h1 id="comicTitle"></h1>
+                <p id="comicAuthor"></p>
+                <p id="comicDescription"></p>
+                <div class="reading-progress">
+                    <p class="last-read">上次阅读：<span id="lastReadChapter">暂无记录</span></p>
+                    <button id="continueReading" class="continue-btn" style="display: none;">继续阅读</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="sort-control">
+            <button id="sortButton" class="sort-btn" onclick="toggleSort()">
+                <span id="sortIcon">↓</span> 章节排序
+            </button>
+        </div>
+
+        <div id="chaptersList" class="chapters-list">
+            <!-- 章节列表将通过JavaScript动态加载 -->
+        </div>
+    </main>
+
+    <script>
+        let currentUser = null;
+        let isAdmin = false;
+
+        // 从URL获取漫画ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const comicId = urlParams.get('comic_id');
+
+        async function getCurrentUser() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('/api/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    currentUser = await response.json();
+                    isAdmin = currentUser.role === 'admin';
+                    updateUserInterface();
+                } else {
+                    window.location.href = '/static/login.html';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = '/static/login.html';
+            }
+        }
+
+        function updateUserInterface() {
+            const userAvatar = document.getElementById('userAvatar');
+            userAvatar.textContent = currentUser.email.charAt(0).toUpperCase();
+            
+            const userName = document.getElementById('userName');
+            userName.textContent = currentUser.email;
+            
+            document.querySelectorAll('.admin-only').forEach(el => {
+                el.style.display = isAdmin ? 'block' : 'none';
+            });
+            
+            document.getElementById('adminBadge').style.display = isAdmin ? 'inline-block' : 'none';
+        }
+
+        async function loadComicDetails() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/comics/${comicId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const comic = await response.json();
+                    document.getElementById('comicCover').src = comic.cover_image;
+                    document.getElementById('comicTitle').textContent = comic.title;
+                    document.getElementById('comicAuthor').textContent = `作者：${comic.author}`;
+                    document.getElementById('comicDescription').textContent = comic.description;
+                    document.title = `${comic.title} - 漫画章节`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        let isAscending = true; // 默认升序
+        let chaptersData = []; // 存储章节数据
+
+        async function loadChapters() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/comics/${comicId}/chapters`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    chaptersData = await response.json(); // 保存数据
+                    renderChapters(); // 渲染章节列表
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function renderChapters() {
+            const chaptersList = document.getElementById('chaptersList');
+            chaptersList.innerHTML = '';
+            
+            // 根据排序顺序对章节进行排序
+            const sortedChapters = [...chaptersData].sort((a, b) => {
+                if (isAscending) {
+                    return a.chapter_number - b.chapter_number;
+                } else {
+                    return b.chapter_number - a.chapter_number;
+                }
+            });
+            
+            const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
+            const comicProgress = progress[comicId];
+            
+            sortedChapters.forEach(chapter => {
+                const isRead = comicProgress && comicProgress.readChapters && 
+                              comicProgress.readChapters.includes(chapter.id);
+                
+                const chapterElement = document.createElement('div');
+                chapterElement.className = `chapter-item ${isRead ? 'read' : ''}`;
+                chapterElement.innerHTML = `
+                    <a href="/static/reader.html?chapter_id=${chapter.id}" class="chapter-title">
+                        ${chapter.title}
+                    </a>
+                    <div class="chapter-number">第 ${chapter.chapter_number} 话</div>
+                    ${isAdmin ? `
+                        <div class="admin-controls">
+                            <button class="admin-btn edit-btn" onclick="editChapter(${chapter.id})">编辑</button>
+                            <button class="admin-btn delete-btn" onclick="deleteChapter(${chapter.id})">删除</button>
+                        </div>
+                    ` : ''}
+                `;
+                chaptersList.appendChild(chapterElement);
+            });
+
+            // 更新排序按钮状态
+            const sortButton = document.getElementById('sortButton');
+            sortButton.setAttribute('data-order', isAscending ? 'asc' : 'desc');
+            document.getElementById('sortIcon').textContent = isAscending ? '↑' : '↓';
+        }
+
+        function toggleSort() {
+            isAscending = !isAscending;
+            renderChapters();
+        }
+
+        async function deleteChapter(chapterId) {
+            if (!confirm('确定要删除这个章节吗？')) return;
+            
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/chapters/${chapterId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    loadChapters();
+                } else {
+                    alert('删除失败');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('删除出错');
+            }
+        }
+
+        function editChapter(chapterId) {
+            window.location.href = `/static/edit-chapter.html?chapter_id=${chapterId}`;
+        }
+
+        function loadReadingProgress() {
+            const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
+            const comicProgress = progress[comicId];
+            
+            if (comicProgress) {
+                document.getElementById('lastReadChapter').textContent = 
+                    `${comicProgress.chapterTitle} - ${comicProgress.scrollPosition}%`;
+                
+                const continueBtn = document.getElementById('continueReading');
+                continueBtn.style.display = 'block';
+                continueBtn.onclick = () => {
+                    window.location.href = `/static/reader.html?chapter_id=${comicProgress.chapterId}`;
+                };
+            }
+        }
+
+        // 页面加载时执行
+        getCurrentUser();
+        loadComicDetails();
+        loadChapters();
+        loadReadingProgress();
+    </script>
+</body>
+</html>

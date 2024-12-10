@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漫画阅读</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .header {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #333;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .nav-link:hover {
+            background-color: #f5f5f5;
+        }
+
+        .nav-link.active {
+            color: #667eea;
+            background-color: #f0f2ff;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .user-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 0.5rem 0;
+            display: none;
+            min-width: 150px;
+        }
+
+        .user-profile:hover .user-menu {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 0.5rem 1rem;
+            color: #333;
+            text-decoration: none;
+            display: block;
+            transition: background-color 0.2s;
+        }
+
+        .menu-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .menu-item.logout {
+            color: #ff4757;
+            border-top: 1px solid #eee;
+        }
+
+        .admin-badge {
+            background: #ff4757;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        .main-content {
+            margin-top: 80px;
+            padding: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .page-title {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .add-comic-btn {
+            background: #667eea;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+
+        .add-comic-btn:hover {
+            background: #5a6fe4;
+        }
+
+        .comics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 2rem;
+            padding: 1rem;
+        }
+
+        .comic-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .comic-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .comic-cover {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+        }
+
+        .comic-info {
+            padding: 1rem;
+        }
+
+        .comic-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .comic-author {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .logout-button {
+            padding: 0.5rem 1rem;
+            background-color: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .logout-button:hover {
+            background-color: #ff6b81;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .comic-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: none;
+        }
+
+        .comic-card:hover .comic-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .delete-btn {
+            background: rgba(255, 71, 87, 0.9);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background: rgb(255, 71, 87);
+        }
+
+        .confirm-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: none;
+        }
+
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        .dialog-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: flex-end;
+        }
+
+        .dialog-btn {
+            padding: 5px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .confirm-btn {
+            background: #ff4757;
+            color: white;
+        }
+
+        .cancel-btn {
+            background: #f1f2f6;
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .comics-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 1rem;
+            }
+
+            .comic-cover {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <nav class="nav-menu">
+                <a href="/static/comics.html" class="nav-link active">首页</a>
+                <a href="/static/favorites.html" class="nav-link">收藏</a>
+                <a href="/static/history.html" class="nav-link">历史</a>
+                <a href="/static/admin.html" class="nav-link admin-only" style="display: none;">管理</a>
+            </nav>
+            <div class="user-profile">
+                <div class="user-avatar" id="userAvatar"></div>
+                <span id="userName"></span>
+                <span id="adminBadge" class="admin-badge" style="display: none;">管理员</span>
+                <div class="user-menu">
+                    <a href="/static/profile.html" class="menu-item">个人设置</a>
+                    <a href="/static/admin.html" class="menu-item admin-only" style="display: none;">漫画管理</a>
+                    <a href="#" class="menu-item logout" onclick="logout()">退出登录</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="page-title">
+            <h1>漫画列表</h1>
+            <a href="/static/admin.html" class="add-comic-btn admin-only" style="display: none;">添加漫画</a>
+        </div>
+        <div class="comics-grid" id="comicsGrid"></div>
+    </main>
+
+    <div class="dialog-overlay" id="dialogOverlay"></div>
+    <div class="confirm-dialog" id="confirmDialog">
+        <h3>确认删除</h3>
+        <p>确定要删除这部漫画吗？此操作不可恢复。</p>
+        <div class="dialog-buttons">
+            <button class="dialog-btn cancel-btn" onclick="hideDialog()">取消</button>
+            <button class="dialog-btn confirm-btn" id="confirmDelete">删除</button>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+
+        async function getCurrentUser() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('/api/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    currentUser = await response.json();
+                    updateUserInterface();
+                } else {
+                    window.location.href = '/static/login.html';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = '/static/login.html';
+            }
+        }
+
+        function updateUserInterface() {
+            // 更新用户头像
+            const userAvatar = document.getElementById('userAvatar');
+            userAvatar.textContent = currentUser.email.charAt(0).toUpperCase();
+
+            // 更新用户名
+            const userName = document.getElementById('userName');
+            userName.textContent = currentUser.email;
+
+            // 根据用户角色显示/隐藏管理员功能
+            const isAdmin = currentUser.role === 'admin';
+            document.querySelectorAll('.admin-only').forEach(el => {
+                el.style.display = isAdmin ? 'block' : 'none';
+            });
+            document.getElementById('adminBadge').style.display = isAdmin ? 'inline-block' : 'none';
+        }
+
+        // 加载漫画列表
+        async function loadComics() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('/api/comics', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const comics = await response.json();
+                    const grid = document.getElementById('comicsGrid');
+                    
+                    if (comics.length === 0) {
+                        grid.innerHTML = `
+                            <div class="empty-state">
+                                <h2>暂无漫画</h2>
+                                <p>管理员还没有上传任何漫画</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    grid.innerHTML = '';
+                    comics.forEach(comic => {
+                        const card = document.createElement('div');
+                        card.className = 'comic-card';
+                        card.innerHTML = `
+                            <div class="comic-actions">
+                                <button class="delete-btn" onclick="showDeleteConfirm(${comic.id}, event)">删除</button>
+                            </div>
+                            <img src="${comic.cover_image}" class="comic-cover" alt="${comic.title}">
+                            <div class="comic-info">
+                                <div class="comic-title">${comic.title}</div>
+                                <div class="comic-author">${comic.author}</div>
+                            </div>
+                        `;
+                        card.onclick = (e) => {
+                            if (!e.target.classList.contains('delete-btn')) {
+                                window.location.href = `/static/chapters.html?comic_id=${comic.id}`;
+                            }
+                        };
+                        grid.appendChild(card);
+                    });
+                } else if (response.status === 401) {
+                    window.location.href = '/static/login.html';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/static/login.html';
+        }
+
+        // 显示删除确认对话框
+        function showDeleteConfirm(comicId, event) {
+            event.stopPropagation();
+            const dialog = document.getElementById('confirmDialog');
+            const overlay = document.getElementById('dialogOverlay');
+            dialog.style.display = 'block';
+            overlay.style.display = 'block';
+            
+            document.getElementById('confirmDelete').onclick = () => deleteComic(comicId);
+        }
+
+        // 隐藏对话框
+        function hideDialog() {
+            document.getElementById('confirmDialog').style.display = 'none';
+            document.getElementById('dialogOverlay').style.display = 'none';
+        }
+
+        // 删除漫画
+        async function deleteComic(comicId) {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/comics/${comicId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    hideDialog();
+                    loadComics();
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || '删除失败');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('删除出错，请稍后重试');
+            }
+        }
+
+        // 页面加载时执行
+        getCurrentUser();
+        loadComics();
+    </script>
+</body>
+</html>

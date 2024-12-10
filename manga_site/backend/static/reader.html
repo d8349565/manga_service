@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漫画阅读</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(26, 26, 26, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            z-index: 1000;
+            transition: transform 0.3s;
+        }
+
+        .header.hidden {
+            transform: translateY(-100%);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #fff;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .chapter-info {
+            text-align: center;
+            color: #fff;
+        }
+
+        .reader-container {
+            margin: 60px auto 0;
+            line-height: 0;
+            text-align: center;
+        }
+
+        .manga-image {
+            display: block;
+            max-width: 100%;
+            width: 400px;
+            height: auto;
+            margin: 0 auto;
+        }
+
+        .chapter-navigation {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(26, 26, 26, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;  /* 默认隐藏 */
+            gap: 1rem;
+            z-index: 1000;
+            transition: opacity 0.3s;
+        }
+
+        .nav-button {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .nav-button:hover {
+            background: #444;
+        }
+
+        .nav-button:disabled {
+            background: #222;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .error {
+            color: #ff4757;
+            padding: 20px;
+            text-align: center;
+            background: rgba(255, 71, 87, 0.1);
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+
+        /* 阅读设置面板 */
+        .reader-settings {
+            position: fixed;
+            right: 10px;  /* 减小右边距 */
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(26, 26, 26, 0.95);  /* 增加不透明度 */
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+            z-index: 1000;
+            transition: opacity 0.3s;
+            max-width: 90vw;  /* 限制最大宽度 */
+            width: 300px;     /* 设置基础宽度 */
+        }
+
+        .setting-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .setting-label {
+            color: #fff;
+            font-size: 0.9rem;
+        }
+
+        .setting-control {
+            background: #333;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 4px;
+            color: #fff;
+        }
+
+        /* 进度条 */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 2px;
+            background: #4CAF50;
+            transition: width 0.3s;
+            z-index: 1001;
+        }
+
+        .reading-options,
+        .progress-bar {
+            display: none;
+        }
+
+        /* 添加滑块样式 */
+        .width-slider {
+            width: 100%;
+            height: 4px;
+            background: #333;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .width-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #4CAF50;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .width-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #4CAF50;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .width-label {
+            color: #fff;
+            font-size: 12px;
+            text-align: center;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .chapter-select {
+            width: 100%;
+            padding: 8px;
+            background: #333;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;  /* 增大字体 */
+            -webkit-appearance: none;  /* 移除默认样式 */
+            -moz-appearance: none;
+            appearance: none;
+        }
+
+        .chapter-select option {
+            background: #333;
+            color: #fff;
+        }
+
+        /* 添加点击区域样式 */
+        .click-area {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 999;
+        }
+
+        /* 添加下拉箭头 */
+        .chapter-select-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .chapter-select-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #fff;
+            pointer-events: none;
+        }
+
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .reader-settings {
+                right: 50%;  /* 居中显示 */
+                transform: translate(50%, -50%);  /* 居中显示 */
+                width: 90vw;  /* 宽度占屏幕90% */
+                max-width: 400px;
+            }
+
+            .setting-item {
+                margin-bottom: 15px;  /* 增加间距 */
+            }
+
+            .setting-label {
+                font-size: 16px;  /* 增大标签字体 */
+                margin-bottom: 8px;
+            }
+
+            .chapter-select {
+                padding: 12px 8px;  /* 增大点击区域 */
+                font-size: 16px;    /* 确保字体大小合适 */
+            }
+
+            .width-slider {
+                height: 6px;  /* 增大滑块高度 */
+            }
+
+            .width-slider::-webkit-slider-thumb {
+                width: 24px;   /* 增大滑块大小 */
+                height: 24px;
+            }
+
+            .width-slider::-moz-range-thumb {
+                width: 24px;
+                height: 24px;
+            }
+
+            .width-label {
+                font-size: 14px;
+                margin-top: 8px;
+            }
+        }
+
+        /* 防止选择器被系统键盘遮挡 */
+        @media (max-height: 600px) {
+            .reader-settings {
+                top: 20px;
+                transform: translateX(50%);  /* 只保留水平居中 */
+            }
+        }
+
+        /* 章节过渡字段样式 */
+        .chapter-transition {
+            text-align: center;
+            color: #fff;
+            font-size: 18px;
+            margin: 20px 0;
+            padding: 10px;
+            background: rgba(26, 26, 26, 0.8);
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-bar" id="progressBar"></div>
+    
+    <header class="header" id="header">
+        <div class="header-content">
+            <div class="nav-menu">
+                <a href="javascript:history.back()" class="nav-link">返回目录</a>
+                <div class="chapter-info">
+                    <span id="comicTitle"></span>
+                    <span id="chapterTitle"></span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="reader-container" id="readerContainer">
+        <!-- 图片将通过JavaScript动态加载 -->
+    </div>
+
+    <div class="chapter-navigation" id="chapterNavigation">
+        <button id="prevButton" class="nav-button">上一章</button>
+        <button id="nextButton" class="nav-button">下一章</button>
+    </div>
+
+    <div class="reader-settings" id="readerSettings">
+        <div class="setting-item">
+            <label class="setting-label">图片宽度</label>
+            <input 
+                type="range" 
+                id="imageWidth" 
+                class="setting-control width-slider" 
+                min="200" 
+                max="1200" 
+                step="50" 
+                value="400"
+                onchange="changeImageWidth(this.value)"
+                oninput="updateWidthLabel(this.value)"
+            >
+            <span id="widthLabel" class="width-label">400px</span>
+        </div>
+        <div class="setting-item">
+            <label class="setting-label">选择章节</label>
+            <div class="chapter-select-wrapper">
+                <select id="chapterSelect" class="setting-control chapter-select">
+                    <!-- 章节选项将通过JavaScript动态加载 -->
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const chapterId = urlParams.get('chapter_id');
+        let currentChapter = null;
+        let lastScrollPosition = 0;
+        let headerTimeout;
+        let lastScrollY = 0;
+        let ticking = false;
+        let settingsTimeout;
+        let chaptersData = [];
+        let isLoading = false;
+        let currentChapterIndex = 0;
+
+        // 控制头部显示/隐藏
+        function handleScroll() {
+            lastScrollY = window.scrollY;
+            
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    const header = document.getElementById('header');
+                    
+                    // 向下滚动超过50px时隐藏header
+                    if (lastScrollY > 50 && lastScrollY > lastKnownScrollY) {
+                        header.classList.add('hidden');
+                    } else {
+                        header.classList.remove('hidden');
+                    }
+                    
+                    lastKnownScrollY = lastScrollY;
+                    ticking = false;
+                    
+                    // 保存阅读进度
+                    saveReadingProgress();
+                });
+                
+                ticking = true;
+            }
+        }
+
+        // 加载章节图片
+        async function loadChapterImages(chapterId) {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/chapters/${chapterId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const chapterData = await response.json();
+                    const container = document.getElementById('readerContainer');
+
+                    // 添加章节过渡字段
+                    const transition = document.createElement('div');
+                    transition.className = 'chapter-transition';
+                    transition.textContent = chapterData.title;
+                    container.appendChild(transition);
+
+                    // 加载图片
+                    if (Array.isArray(chapterData.images) && chapterData.images.length > 0) {
+                        chapterData.images.forEach((imageUrl, index) => {
+                            if (imageUrl && typeof imageUrl === 'string') {
+                                const img = document.createElement('img');
+                                img.src = imageUrl;
+                                img.className = 'manga-image';
+                                img.alt = `第${index + 1}页`;
+                                img.loading = 'lazy';
+                                img.style.width = `${localStorage.getItem('mangaImageWidth') || '400'}px`;
+                                img.onerror = function() {
+                                    console.error(`Failed to load image: ${imageUrl}`);
+                                    this.src = '/static/images/error.png';
+                                };
+                                container.appendChild(img);
+                            }
+                        });
+                    } else {
+                        container.innerHTML += '<div class="error">本章节暂无图片</div>';
+                    }
+
+                    // 更新当前章节索引
+                    currentChapterIndex++;
+                    isLoading = false;
+                } else {
+                    console.error('Failed to load chapter:', await response.json());
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // 无限滚动加载
+        function handleScroll() {
+            if (isLoading) return;
+
+            const scrollPosition = window.scrollY + window.innerHeight;
+            const containerHeight = document.documentElement.scrollHeight;
+
+            if (scrollPosition >= containerHeight - 100) {
+                isLoading = true;
+                const nextChapterId = getNextChapterId();
+                if (nextChapterId) {
+                    loadChapterImages(nextChapterId);
+                }
+            }
+        }
+
+        // 获取下一个章节ID
+        function getNextChapterId() {
+            if (currentChapterIndex < chaptersData.length) {
+                return chaptersData[currentChapterIndex].id;
+            }
+            return null;
+        }
+
+        // 页面加载时执行
+        window.addEventListener('load', async () => {
+            // 加载初始章节
+            await loadChapterImages(chapterId);
+
+            // 加载章节列表
+            await loadChapterList();
+
+            // 添加滚动监听
+            window.addEventListener('scroll', handleScroll);
+        });
+
+        async function updateNavigationButtons() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/chapters/${chapterId}/navigation`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const navigation = await response.json();
+                    const prevButton = document.getElementById('prevButton');
+                    const nextButton = document.getElementById('nextButton');
+                    
+                    prevButton.disabled = !navigation.prev_chapter;
+                    nextButton.disabled = !navigation.next_chapter;
+                    
+                    if (navigation.prev_chapter) {
+                        prevButton.onclick = () => {
+                            window.location.href = `/static/reader.html?chapter_id=${navigation.prev_chapter}`;
+                        };
+                    }
+                    
+                    if (navigation.next_chapter) {
+                        nextButton.onclick = () => {
+                            window.location.href = `/static/reader.html?chapter_id=${navigation.next_chapter}`;
+                        };
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function saveReadingHistory() {
+            const history = JSON.parse(localStorage.getItem('readingHistory') || '{}');
+            history[currentChapter.comic_id] = {
+                chapterId: chapterId,
+                timestamp: new Date().toISOString(),
+                title: currentChapter.comic_title,
+                chapterTitle: currentChapter.title
+            };
+            localStorage.setItem('readingHistory', JSON.stringify(history));
+        }
+
+        function changeReadingDirection() {
+            const direction = document.getElementById('readingDirection').value;
+            // 实现阅读方向切换逻辑
+        }
+
+        function changeImageWidth(width) {
+            const images = document.querySelectorAll('.manga-image');
+            images.forEach(img => {
+                img.style.width = `${width}px`;
+            });
+            
+            // 保存宽度设置到本地存储
+            localStorage.setItem('mangaImageWidth', width);
+        }
+
+        // 更新宽度标签显示
+        function updateWidthLabel(width) {
+            document.getElementById('widthLabel').textContent = `${width}px`;
+        }
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                document.getElementById('prevButton').click();
+            } else if (e.key === 'ArrowRight') {
+                document.getElementById('nextButton').click();
+            }
+        });
+
+        // 监听滚动事件
+        window.addEventListener('scroll', handleScroll);
+
+        // 页面加载完成后执行
+        window.addEventListener('load', () => {
+            restoreReadingPosition();
+            const savedWidth = localStorage.getItem('mangaImageWidth') || '400';
+            const widthSlider = document.getElementById('imageWidth');
+            widthSlider.value = savedWidth;
+            updateWidthLabel(savedWidth);
+            changeImageWidth(savedWidth);
+            
+            // 添加点击监听
+            document.addEventListener('click', handleClick);
+            
+            // 移除之前的滚动监听（因为现在通过点击控制）
+            window.removeEventListener('scroll', handleScroll);
+            
+            // 初始隐藏设置面板
+            document.getElementById('readerSettings').style.display = 'none';
+        });
+
+        // 防止设置面板内部点击触发隐藏
+        document.getElementById('readerSettings').addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+
+        // 加载章节列表
+        async function loadChapterList() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/comics/${currentChapter.comic_id}/chapters`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    chaptersData = await response.json();
+                    const select = document.getElementById('chapterSelect');
+                    select.innerHTML = '';
+                    
+                    chaptersData.forEach(chapter => {
+                        const option = document.createElement('option');
+                        option.value = chapter.id;
+                        option.textContent = chapter.title;
+                        option.selected = chapter.id === currentChapter.id;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading chapters:', error);
+            }
+        }
+
+        // 章节选择变更处理
+        document.getElementById('chapterSelect').addEventListener('change', function(e) {
+            e.stopPropagation();  // 防止触发隐藏
+            const chapterId = this.value;
+            window.location.href = `/static/reader.html?chapter_id=${chapterId}`;
+        });
+
+        // 点击处理
+        function handleClick(event) {
+            const settings = document.getElementById('readerSettings');
+            const header = document.getElementById('header');
+            const navigation = document.getElementById('chapterNavigation');
+            
+            // 检查是否点击了设置面板或导航按钮内部
+            if (settings.contains(event.target) || navigation.contains(event.target)) {
+                return;
+            }
+
+            // 显示/隐藏所有控制元素
+            const elements = [settings, header, navigation];
+            const isHidden = settings.style.display === 'none';
+            
+            elements.forEach(el => {
+                el.style.display = isHidden ? (el === settings ? 'flex' : 'block') : 'none';
+            });
+
+            // 设置自动隐藏定时器
+            clearTimeout(settingsTimeout);
+            if (isHidden) {
+                settingsTimeout = setTimeout(() => {
+                    elements.forEach(el => {
+                        el.style.display = 'none';
+                    });
+                }, 3000);
+            }
+        }
+
+        // 防止导航按钮点击触发隐藏
+        document.getElementById('chapterNavigation').addEventListener('click', function(event) {
+            event.stopPropagation();
+        });
+
+        // 添加触摸事件支持
+        let touchStartY = 0;
+        let touchStartX = 0;
+
+        document.addEventListener('touchstart', function(e) {
+            touchStartY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX;
+        }, false);
+
+        document.addEventListener('touchend', function(e) {
+            const touchEndY = e.changedTouches[0].clientY;
+            const touchEndX = e.changedTouches[0].clientX;
+            
+            // 计算滑动距离
+            const deltaY = Math.abs(touchEndY - touchStartY);
+            const deltaX = Math.abs(touchEndX - touchStartX);
+            
+            // 如果滑动距离小于20px，认为是点击
+            if (deltaY < 20 && deltaX < 20) {
+                handleClick(e);
+            }
+        }, false);
+
+        // 防止设置面板上的操作触发隐藏
+        document.getElementById('readerSettings').addEventListener('touchstart', function(e) {
+            e.stopPropagation();
+        });
+
+        document.getElementById('readerSettings').addEventListener('touchend', function(e) {
+            e.stopPropagation();
+        });
+    </script>
+</body>
+</html>
