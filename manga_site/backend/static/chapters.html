@@ -55,6 +55,26 @@
             background-color: #f5f5f5;
         }
 
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
         .main-content {
             max-width: 1200px;
             margin: 80px auto 20px;
@@ -278,13 +298,46 @@
                 text-align: left;
             }
         }
+
+        .user-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 0.5rem 0;
+            display: none;
+            min-width: 150px;
+        }
+
+        .user-profile:hover .user-menu {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 0.5rem 1rem;
+            color: #333;
+            text-decoration: none;
+            display: block;
+            transition: background-color 0.2s;
+        }
+
+        .menu-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .menu-item.logout {
+            color: #ff4757;
+            border-top: 1px solid #eee;
+        }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="header-content">
             <nav class="nav-menu">
-                <a href="/static/comics.html" class="nav-link">返回首页</a>
+                <a href="/static/comics.html" class="nav-link">首页</a>
                 <a href="/static/favorites.html" class="nav-link">收藏</a>
                 <a href="/static/history.html" class="nav-link">历史</a>
                 <a href="/static/admin.html" class="nav-link admin-only" style="display: none;">管理</a>
@@ -293,6 +346,11 @@
                 <div class="user-avatar" id="userAvatar"></div>
                 <span id="userName"></span>
                 <span id="adminBadge" class="admin-badge" style="display: none;">管理员</span>
+                <div class="user-menu">
+                    <a href="/static/settings.html" class="menu-item">个人设置</a>
+                    <a href="/static/admin.html" class="menu-item admin-only" style="display: none;">漫画管理</a>
+                    <a href="#" class="menu-item logout" onclick="logout()">退出登录</a>
+                </div>
             </div>
         </div>
     </header>
@@ -498,6 +556,11 @@
                     window.location.href = `/static/reader.html?chapter_id=${comicProgress.chapterId}`;
                 };
             }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/static/login.html';
         }
 
         // 页面加载时执行
