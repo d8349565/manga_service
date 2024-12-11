@@ -452,22 +452,37 @@
         async function loadChapters() {
             const token = localStorage.getItem('token');
             try {
-                const response = await fetch(`/api/comics/${comicId}/chapters`, {
+                // 获取章节列表
+                const chaptersResponse = await fetch(`/api/comics/${comicId}/chapters`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
                 
-                if (response.ok) {
-                    chaptersData = await response.json(); // 保存数据
-                    renderChapters(); // 渲染章节列表
+                if (chaptersResponse.ok) {
+                    chaptersData = await chaptersResponse.json();
+                    
+                    // 获取阅读进度
+                    const progressResponse = await fetch(`/api/reader/comics/${comicId}/progress`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+                    
+                    let readingProgress = null;
+                    if (progressResponse.ok) {
+                        readingProgress = await progressResponse.json();
+                    }
+                    
+                    renderChapters(readingProgress);
+                    loadReadingProgress(readingProgress);
                 }
             } catch (error) {
                 console.error('Error:', error);
             }
         }
 
-        function renderChapters() {
+        function renderChapters(readingProgress) {
             const chaptersList = document.getElementById('chaptersList');
             chaptersList.innerHTML = '';
             
@@ -480,12 +495,10 @@
                 }
             });
             
-            const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
-            const comicProgress = progress[comicId];
-            
             sortedChapters.forEach(chapter => {
-                const isRead = comicProgress && comicProgress.readChapters && 
-                              comicProgress.readChapters.includes(chapter.id);
+                // 检查章节是否已读
+                const isRead = readingProgress && readingProgress.read_chapter_ids && 
+                              readingProgress.read_chapter_ids.includes(chapter.id);
                 
                 const chapterElement = document.createElement('div');
                 chapterElement.className = `chapter-item ${isRead ? 'read' : ''}`;
@@ -542,19 +555,29 @@
             window.location.href = `/static/edit-chapter.html?chapter_id=${chapterId}`;
         }
 
-        function loadReadingProgress() {
-            const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
-            const comicProgress = progress[comicId];
-            
-            if (comicProgress) {
-                document.getElementById('lastReadChapter').textContent = 
-                    `${comicProgress.chapterTitle} - ${comicProgress.scrollPosition}%`;
-                
-                const continueBtn = document.getElementById('continueReading');
-                continueBtn.style.display = 'block';
-                continueBtn.onclick = () => {
-                    window.location.href = `/static/reader.html?chapter_id=${comicProgress.chapterId}`;
-                };
+        function loadReadingProgress(readingProgress) {
+            const lastReadSpan = document.getElementById('lastReadChapter');
+            const continueBtn = document.getElementById('continueReading');
+
+            if (readingProgress && readingProgress.current_chapter) {
+                // 查找当前章节信息
+                const currentChapter = chaptersData.find(
+                    chapter => chapter.id === readingProgress.current_chapter
+                );
+
+                if (currentChapter) {
+                    lastReadSpan.textContent = currentChapter.title;
+                    continueBtn.style.display = 'block';
+                    continueBtn.onclick = () => {
+                        window.location.href = `/static/reader.html?chapter_id=${currentChapter.id}`;
+                    };
+                } else {
+                    lastReadSpan.textContent = '暂无记录';
+                    continueBtn.style.display = 'none';
+                }
+            } else {
+                lastReadSpan.textContent = '暂无记录';
+                continueBtn.style.display = 'none';
             }
         }
 
