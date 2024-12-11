@@ -319,16 +319,12 @@
                         const card = document.createElement('div');
                         card.className = 'history-card';
                         card.innerHTML = `
-                            <img src="${item.cover_image}" class="history-cover" alt="${item.title}">
+                            <img src="${item.comic_cover}" class="history-cover" alt="${item.comic_title}">
                             <div class="history-info">
-                                ${item.unread_chapters > 0 ? 
-                                    `<div class="unread-badge">未读 ${item.unread_chapters} 章</div>` : 
-                                    ''
-                                }
-                                <div class="history-title">${item.title}</div>
-                                <div class="history-author">${item.author}</div>
+                                <div class="history-title">${item.comic_title}</div>
                                 <div class="reading-progress">
-                                    已读进度：${item.current_chapter}/${item.total_chapters}
+                                    最近阅读：${item.chapter_title}
+                                    <div class="progress-detail">阅读进度：${item.scroll_position}%</div>
                                 </div>
                                 <div class="last-read-time">
                                     上次阅读：${lastReadDate.toLocaleDateString()} ${lastReadDate.toLocaleTimeString()}
@@ -336,7 +332,7 @@
                             </div>
                         `;
                         card.onclick = () => {
-                            window.location.href = `/static/chapters.html?comic_id=${item.comic_id}`;
+                            window.location.href = `/static/reader.html?chapter_id=${item.chapter_id}`;
                         };
                         grid.appendChild(card);
                     });

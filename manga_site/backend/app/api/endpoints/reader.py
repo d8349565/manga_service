@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
@@ -8,8 +8,14 @@ from app.models.chapter import Chapter
 from app.models.user import User
 from app.models.reading_progress import ReadingProgress
 from app.core.deps import get_current_user
+from pydantic import BaseModel
 
 router = APIRouter()
+
+class ReadingProgressUpdate(BaseModel):
+    comic_id: int
+    chapter_id: int
+    scroll_position: float
 
 @router.get("/comics/{comic_id}/read/{chapter_id}")
 async def get_chapter_content(
@@ -79,8 +85,9 @@ async def get_reading_progress(
     
     return {
         "current_chapter": progress.chapter_id if progress else None,
+        "scroll_position": progress.scroll_position if progress else 0,
         "last_read_at": progress.last_read_at if progress else None
-    } 
+    }
 
 @router.get("/history")
 async def get_reading_history(
@@ -110,5 +117,43 @@ async def get_reading_history(
         "chapter_id": item.ReadingProgress.chapter_id,
         "chapter_title": item.Chapter.title,
         "chapter_number": item.Chapter.chapter_number,
+        "scroll_position": item.ReadingProgress.scroll_position,
         "last_read_at": item.ReadingProgress.last_read_at
-    } for item in history] 
+    } for item in history]
+
+@router.post("/progress")
+async def update_reading_progress(
+    progress_data: ReadingProgressUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    更新用户的阅读进度
+    """
+    # 查找现有进度记录
+    progress = db.query(ReadingProgress).filter(
+        ReadingProgress.user_id == current_user.id,
+        ReadingProgress.comic_id == progress_data.comic_id
+    ).first()
+    
+    if progress:
+        # 更新现有记录
+        progress.chapter_id = progress_data.chapter_id
+        progress.scroll_position = progress_data.scroll_position
+        progress.last_read_at = datetime.utcnow()
+    else:
+        # 创建新记录
+        progress = ReadingProgress(
+            user_id=current_user.id,
+            comic_id=progress_data.comic_id,
+            chapter_id=progress_data.chapter_id,
+            scroll_position=progress_data.scroll_position
+        )
+        db.add(progress)
+    
+    try:
+        db.commit()
+        return {"status": "success", "message": "阅读进度已更新"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e)) 

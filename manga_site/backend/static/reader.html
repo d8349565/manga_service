@@ -498,7 +498,7 @@
             }
         });
 
-        // 修改点击处理函数
+        // 修改点击处函数
         function handleClick(event) {
             const settings = document.getElementById('readerSettings');
             const header = document.getElementById('header');
@@ -530,19 +530,49 @@
             }
         }
 
-        // 恢复阅读进度
-        function restoreReadingProgress() {
-            const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
-            if (progress[currentChapter.comic_id]) {
-                const chapterProgress = progress[currentChapter.comic_id];
-                if (chapterProgress.chapterId === parseInt(chapterId)) {
-                    const scrollPosition = (chapterProgress.scrollPosition / 100) * 
-                        (document.documentElement.scrollHeight - window.innerHeight);
-                    window.scrollTo({
-                        top: scrollPosition,
-                        behavior: 'instant' // 使用 'instant' 避免看到滚动过程
-                    });
+        // 修改恢复阅读进度的函数
+        async function restoreReadingProgress() {
+            if (!currentChapter || !currentChapter.comic_id) return;
+
+            try {
+                // 先从服务器获取进度
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/reader/comics/${currentChapter.comic_id}/progress`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const serverProgress = await response.json();
+                    
+                    // 如果是当前章节，恢复滚动位置
+                    if (serverProgress.current_chapter === parseInt(chapterId)) {
+                        const scrollPosition = (serverProgress.scroll_position / 100) * 
+                            (document.documentElement.scrollHeight - window.innerHeight);
+                        window.scrollTo({
+                            top: scrollPosition,
+                            behavior: 'instant'
+                        });
+                        return;
+                    }
                 }
+
+                // 如果服务器获取失败或不是当前章节，尝试使用本地存储
+                const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
+                if (progress[currentChapter.comic_id]) {
+                    const chapterProgress = progress[currentChapter.comic_id];
+                    if (chapterProgress.chapterId === parseInt(chapterId)) {
+                        const scrollPosition = (chapterProgress.scrollPosition / 100) * 
+                            (document.documentElement.scrollHeight - window.innerHeight);
+                        window.scrollTo({
+                            top: scrollPosition,
+                            behavior: 'instant'
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error restoring reading progress:', error);
             }
         }
 
@@ -690,14 +720,15 @@
         }
 
         // 修改保存进度函数
-        function saveReadingProgress(chapterId, chapterTitle) {
+        async function saveReadingProgress(chapterId, chapterTitle) {
             if (!currentChapter || !currentChapter.comic_id) return;
             
-            const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
             const scrollPosition = window.scrollY;
             const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
             const scrollPercent = totalHeight > 0 ? Math.round((scrollPosition / totalHeight) * 100) : 0;
             
+            // 保存到本地存储
+            const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
             if (!progress[currentChapter.comic_id]) {
                 progress[currentChapter.comic_id] = {
                     readChapters: []
@@ -717,6 +748,29 @@
             }
             
             localStorage.setItem('readingProgress', JSON.stringify(progress));
+
+            // 同步到服务器
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch('/api/reader/progress', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        comic_id: parseInt(currentChapter.comic_id),
+                        chapter_id: parseInt(chapterId),
+                        scroll_position: scrollPercent
+                    })
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to sync reading progress with server:', await response.text());
+                }
+            } catch (error) {
+                console.error('Error syncing reading progress:', error);
+            }
         }
 
         async function updateNavigationButtons() {
