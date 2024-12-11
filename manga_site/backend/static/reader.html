@@ -433,6 +433,7 @@
         let currentChapter = null;
         let settingsTimeout;
         let needRestoreProgress = true;  // 标记是否需要恢复进度
+        let lastScrollTop = 0;  // 记录上次滚动位置
 
         // 添加进度记录状态管理
         let progressSaveTimeout = null;
@@ -789,12 +790,12 @@
             }
         });
 
-        // 修改点击处函数
+        // 修改点击处理函数
         function handleClick(event) {
             const settings = document.getElementById('readerSettings');
             const header = document.getElementById('header');
             const navigation = document.getElementById('chapterNavigation');
-            
+
             // 检查是否点击了控制元素
             if (settings.contains(event.target) || 
                 header.contains(event.target) || 
@@ -809,16 +810,6 @@
             elements.forEach(el => {
                 el.style.display = isHidden ? (el === settings ? 'flex' : 'block') : 'none';
             });
-
-            // 设置自动隐藏定时器
-            clearTimeout(settingsTimeout);
-            if (isHidden) {
-                settingsTimeout = setTimeout(() => {
-                    elements.forEach(el => {
-                        el.style.display = 'none';
-                    });
-                }, 3000);
-            }
         }
 
         // 修改页面加载时的初始化顺序
@@ -1124,6 +1115,24 @@
         document.addEventListener('DOMContentLoaded', () => {
             setupProgressTracking();
         });
+
+        // 添加滚动事件监听
+        window.addEventListener('scroll', function() {
+            const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            // 只在向下滚动时隐藏控制元素
+            if (currentScrollTop > lastScrollTop) {
+                const settings = document.getElementById('readerSettings');
+                const header = document.getElementById('header');
+                const navigation = document.getElementById('chapterNavigation');
+                
+                if (settings) settings.style.display = 'none';
+                if (header) header.style.display = 'none';
+                if (navigation) navigation.style.display = 'none';
+            }
+            
+            lastScrollTop = currentScrollTop;
+        }, false);
     </script>
 </body>
 </html>
