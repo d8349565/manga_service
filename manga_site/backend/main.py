@@ -44,7 +44,7 @@ def get_local_ip():
 if __name__ == "__main__":
     import uvicorn
     host = "0.0.0.0"  # 监听所有网络接口
-    port = 8000
+    port = 8812
     local_ip = get_local_ip()
     print(f"\n服务器已启动:")
     print(f"本机访问: http://localhost:{port}")
