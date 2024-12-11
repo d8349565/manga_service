@@ -81,3 +81,34 @@ async def get_reading_progress(
         "current_chapter": progress.chapter_id if progress else None,
         "last_read_at": progress.last_read_at if progress else None
     } 
+
+@router.get("/history")
+async def get_reading_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    skip: int = 0,
+    limit: int = 20
+):
+    """
+    获取用户的阅读历史
+    """
+    history = (
+        db.query(ReadingProgress, Comic, Chapter)
+        .join(Comic, ReadingProgress.comic_id == Comic.id)
+        .join(Chapter, ReadingProgress.chapter_id == Chapter.id)
+        .filter(ReadingProgress.user_id == current_user.id)
+        .order_by(ReadingProgress.last_read_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    
+    return [{
+        "comic_id": item.ReadingProgress.comic_id,
+        "comic_title": item.Comic.title,
+        "comic_cover": item.Comic.cover_image,
+        "chapter_id": item.ReadingProgress.chapter_id,
+        "chapter_title": item.Chapter.title,
+        "chapter_number": item.Chapter.chapter_number,
+        "last_read_at": item.ReadingProgress.last_read_at
+    } for item in history] 

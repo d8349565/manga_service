@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阅读历史</title>
+    <style>
+        /* 保持与 comics.html 相同的样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+
+        .header {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: #333;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .nav-link:hover {
+            background-color: #f5f5f5;
+        }
+
+        .nav-link.active {
+            color: #667eea;
+            background-color: #f0f2ff;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            position: relative;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .user-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 0.5rem 0;
+            display: none;
+            min-width: 150px;
+        }
+
+        .user-profile:hover .user-menu {
+            display: block;
+        }
+
+        .menu-item {
+            padding: 0.5rem 1rem;
+            color: #333;
+            text-decoration: none;
+            display: block;
+            transition: background-color 0.2s;
+        }
+
+        .menu-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .menu-item.logout {
+            color: #ff4757;
+            border-top: 1px solid #eee;
+        }
+
+        .admin-badge {
+            background: #ff4757;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        .main-content {
+            margin-top: 80px;
+            padding: 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .page-title {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 2rem;
+            padding: 1rem;
+        }
+
+        .history-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .history-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .history-cover {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+        }
+
+        .history-info {
+            padding: 1rem;
+            position: relative;
+        }
+
+        .history-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .history-author {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .reading-progress {
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .unread-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff4757;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .last-read-time {
+            font-size: 0.8rem;
+            color: #999;
+            margin-top: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .history-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                gap: 1rem;
+            }
+
+            .history-cover {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <nav class="nav-menu">
+                <a href="/static/comics.html" class="nav-link">首页</a>
+                <a href="/static/favorites.html" class="nav-link">收藏</a>
+                <a href="/static/history.html" class="nav-link active">历史</a>
+                <a href="/static/admin.html" class="nav-link admin-only" style="display: none;">管理</a>
+            </nav>
+            <div class="user-profile">
+                <div class="user-avatar" id="userAvatar"></div>
+                <span id="userName"></span>
+                <span id="adminBadge" class="admin-badge" style="display: none;">管理员</span>
+                <div class="user-menu">
+                    <a href="/static/settings.html" class="menu-item">个人设置</a>
+                    <a href="/static/admin.html" class="menu-item admin-only" style="display: none;">漫画管理</a>
+                    <a href="#" class="menu-item logout" onclick="logout()">退出登录</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="page-title">
+            <h1>阅读历史</h1>
+        </div>
+        <div class="history-grid" id="historyGrid"></div>
+    </main>
+
+    <script>
+        let currentUser = null;
+
+        async function getCurrentUser() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('/api/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    currentUser = await response.json();
+                    updateUserInterface();
+                } else {
+                    window.location.href = '/static/login.html';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                window.location.href = '/static/login.html';
+            }
+        }
+
+        function updateUserInterface() {
+            const userAvatar = document.getElementById('userAvatar');
+            userAvatar.textContent = currentUser.email.charAt(0).toUpperCase();
+
+            const userName = document.getElementById('userName');
+            userName.textContent = currentUser.email;
+
+            const isAdmin = currentUser.role === 'admin';
+            document.querySelectorAll('.admin-only').forEach(el => {
+                el.style.display = isAdmin ? 'block' : 'none';
+            });
+            document.getElementById('adminBadge').style.display = isAdmin ? 'inline-block' : 'none';
+        }
+
+        async function loadHistory() {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch('/api/reader/history', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const history = await response.json();
+                    const grid = document.getElementById('historyGrid');
+                    
+                    if (history.length === 0) {
+                        grid.innerHTML = `
+                            <div class="empty-state">
+                                <h2>暂无历史记录</h2>
+                                <p>您还没有阅读过任何漫画</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    grid.innerHTML = '';
+                    history.forEach(item => {
+                        const lastReadDate = new Date(item.last_read_at);
+                        const card = document.createElement('div');
+                        card.className = 'history-card';
+                        card.innerHTML = `
+                            <img src="${item.cover_image}" class="history-cover" alt="${item.title}">
+                            <div class="history-info">
+                                ${item.unread_chapters > 0 ? 
+                                    `<div class="unread-badge">未读 ${item.unread_chapters} 章</div>` : 
+                                    ''
+                                }
+                                <div class="history-title">${item.title}</div>
+                                <div class="history-author">${item.author}</div>
+                                <div class="reading-progress">
+                                    已读进度：${item.current_chapter}/${item.total_chapters}
+                                </div>
+                                <div class="last-read-time">
+                                    上次阅读：${lastReadDate.toLocaleDateString()} ${lastReadDate.toLocaleTimeString()}
+                                </div>
+                            </div>
+                        `;
+                        card.onclick = () => {
+                            window.location.href = `/static/chapters.html?comic_id=${item.comic_id}`;
+                        };
+                        grid.appendChild(card);
+                    });
+                } else if (response.status === 401) {
+                    window.location.href = '/static/login.html';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = '/static/login.html';
+        }
+
+        getCurrentUser();
+        loadHistory();
+    </script>
+</body>
+</html> 
