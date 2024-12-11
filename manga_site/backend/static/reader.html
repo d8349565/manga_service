@@ -102,6 +102,8 @@
             border-radius: 4px;
             cursor: pointer;
             transition: background-color 0.2s;
+            white-space: nowrap;  /* 防止文字换行 */
+            min-width: 80px;      /* 确保按钮有最小宽度 */
         }
 
         .nav-button:hover {
@@ -355,6 +357,12 @@
                 font-size: 14px;
                 margin-top: 8px;
             }
+
+            .nav-button {
+                padding: 0.5rem 0.8rem;  /* 稍微减小内边距 */
+                font-size: 14px;         /* 稍微减小字体 */
+                min-width: 70px;         /* 减小最小宽度 */
+            }
         }
 
         /* 防止选择器被系统键盘遮挡 */
@@ -399,6 +407,7 @@
     <div class="chapter-navigation" id="chapterNavigation">
         <button id="prevButton" class="nav-button">上一章</button>
         <button id="nextButton" class="nav-button">下一章</button>
+        <button id="refreshButton" class="nav-button" onclick="location.reload(true)">刷新</button>
     </div>
 
     <div class="reader-settings" id="readerSettings">
@@ -803,13 +812,17 @@
                 return;
             }
 
-            // 显示/隐藏所有控制元素
-            const elements = [settings, header, navigation];
-            const isHidden = settings.style.display === 'none';
-            
-            elements.forEach(el => {
-                el.style.display = isHidden ? (el === settings ? 'flex' : 'block') : 'none';
-            });
+            // 检查所有控制元素是否都隐藏
+            const allHidden = settings.style.display === 'none' && 
+                            header.style.display === 'none' && 
+                            navigation.style.display === 'none';
+
+            // 只有当所有元素都隐藏时，才显示它们
+            if (allHidden) {
+                settings.style.display = 'flex';
+                header.style.display = 'block';
+                navigation.style.display = 'flex';
+            }
         }
 
         // 修改页面加载时的初始化顺序
