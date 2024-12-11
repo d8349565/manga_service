@@ -183,30 +183,78 @@
             display: none;
         }
 
-        /* 添加滑块样式 */
+        /* 滑块样式 */
         .width-slider {
             width: 100%;
             height: 4px;
-            background: #333;
-            outline: none;
+            margin: 10px 0;
+            background: #ddd;
+            border-radius: 2px;
+            cursor: pointer;
             -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
         }
 
+        /* Webkit (Chrome, Safari, Edge) */
         .width-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
+            appearance: none;
             width: 16px;
             height: 16px;
             background: #4CAF50;
             border-radius: 50%;
+            border: none;
             cursor: pointer;
+            transition: background .2s;
         }
 
+        .width-slider::-webkit-slider-thumb:hover {
+            background: #45a049;
+        }
+
+        /* Firefox */
         .width-slider::-moz-range-thumb {
             width: 16px;
             height: 16px;
             background: #4CAF50;
             border-radius: 50%;
+            border: none;
             cursor: pointer;
+            transition: background .2s;
+        }
+
+        .width-slider::-moz-range-thumb:hover {
+            background: #45a049;
+        }
+
+        /* 滑块轨道样式 */
+        .width-slider::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .width-slider::-moz-range-track {
+            width: 100%;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .width-slider:focus {
+            outline: none;
+        }
+
+        .width-slider:focus::-webkit-slider-thumb {
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+        }
+
+        .width-slider:focus::-moz-range-thumb {
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
         }
 
         .width-label {
@@ -386,6 +434,249 @@
         let settingsTimeout;
         let needRestoreProgress = true;  // 标记是否需要恢复进度
 
+        // 添加进度记录状态管理
+        let progressSaveTimeout = null;
+        let lastSavedProgress = null;
+        let isInitialProgressRestored = false;
+
+        // 添加图片加载状态管理
+        let loadedImages = 0;
+        let totalImages = 0;
+        const INITIAL_LOAD_SIZE = 5; // 每个方向优先加载的图片数量
+        let progressRestoreTimeout = null;
+
+        // 获取目标阅读位置的图片索引
+        async function getTargetImageIndex() {
+            try {
+                let targetIndex = 0;
+                
+                // 先从服务器获取进度
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/reader/comics/${currentChapter.comic_id}/progress`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const serverProgress = await response.json();
+                    if (serverProgress.current_chapter === parseInt(chapterId)) {
+                        targetIndex = Math.floor((serverProgress.scroll_position / 100) * totalImages);
+                    }
+                }
+
+                // 如果服务器没有进度，检查本地存储
+                const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
+                if (progress[currentChapter.comic_id]) {
+                    const chapterProgress = progress[currentChapter.comic_id];
+                    if (chapterProgress.chapterId === parseInt(chapterId)) {
+                        targetIndex = Math.floor((chapterProgress.scrollPosition / 100) * totalImages);
+                    }
+                }
+
+                return Math.max(0, Math.min(targetIndex, totalImages - 1));
+            } catch (error) {
+                console.error('Error getting target image index:', error);
+                return 0;
+            }
+        }
+
+        // 修改图片加载函数
+        async function loadChapterImages(chapterId) {
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/chapters/${chapterId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const chapterData = await response.json();
+                    const container = document.getElementById('readerContainer');
+                    container.innerHTML = '';
+
+                    if (Array.isArray(chapterData.images) && chapterData.images.length > 0) {
+                        totalImages = chapterData.images.length;
+                        
+                        // 创建加载进度显示
+                        const progressBar = document.createElement('div');
+                        progressBar.className = 'loading-progress';
+                        progressBar.style.cssText = `
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 0%;
+                            height: 2px;
+                            background: #4CAF50;
+                            transition: width 0.3s;
+                            z-index: 1000;
+                        `;
+                        document.body.appendChild(progressBar);
+
+                        // 创建所有图片容器和图片元素
+                        const imageElements = chapterData.images.map((imageUrl, index) => {
+                            if (imageUrl && typeof imageUrl === 'string') {
+                                const imgContainer = document.createElement('div');
+                                imgContainer.className = 'image-container';
+                                imgContainer.style.minHeight = '200px';
+                                container.appendChild(imgContainer);
+
+                                const img = document.createElement('img');
+                                img.className = 'manga-image';
+                                img.style.width = `${localStorage.getItem('mangaImageWidth') || '800'}px`;
+                                img.style.display = 'none';
+                                imgContainer.appendChild(img);
+
+                                return { img, url: imageUrl, index };
+                            }
+                            return null;
+                        }).filter(Boolean);
+
+                        // 获取目标阅读位置
+                        const targetIndex = await getTargetImageIndex();
+                        
+                        // 计算优先加载的图片范围
+                        const startIndex = Math.max(0, targetIndex - INITIAL_LOAD_SIZE);
+                        const endIndex = Math.min(totalImages - 1, targetIndex + INITIAL_LOAD_SIZE);
+                        
+                        // 创建优先加载队列
+                        const priorityImages = imageElements.filter(
+                            item => item.index >= startIndex && item.index <= endIndex
+                        );
+                        
+                        // 创建剩余图片队列
+                        const remainingImages = imageElements.filter(
+                            item => item.index < startIndex || item.index > endIndex
+                        );
+
+                        // 先加载目标位置周围的图片
+                        await Promise.all(
+                            priorityImages.map(({ img, url }) => loadImage(img, url, progressBar))
+                        );
+
+                        // 恢复阅读进度
+                        if (!isInitialProgressRestored) {
+                            await restoreReadingProgress();
+                            isInitialProgressRestored = true;
+                        }
+
+                        // 加载剩余的图片
+                        if (remainingImages.length > 0) {
+                            // 按照与目标位置的距离排序剩余图片
+                            remainingImages.sort((a, b) => 
+                                Math.abs(a.index - targetIndex) - Math.abs(b.index - targetIndex)
+                            );
+
+                            // 分批加载剩余图片
+                            const batchSize = 5;
+                            for (let i = 0; i < remainingImages.length; i += batchSize) {
+                                const batch = remainingImages.slice(i, i + batchSize);
+                                await Promise.all(
+                                    batch.map(({ img, url }) => loadImage(img, url, progressBar))
+                                );
+                            }
+
+                            console.log('所有图片加载完成');
+                            // 开始预加载下一章
+                            preloadNextChapter();
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading chapter images:', error);
+            }
+        }
+
+        // 加载单张图片的函数
+        function loadImage(img, imageUrl, progressBar) {
+            return new Promise((resolve) => {
+                img.onload = () => {
+                    img.style.display = 'block';
+                    loadedImages++;
+                    // 更新加载进度
+                    const progress = (loadedImages / totalImages) * 100;
+                    progressBar.style.width = `${progress}%`;
+                    
+                    // 所有图片加载完成后移除进度条
+                    if (loadedImages === totalImages) {
+                        setTimeout(() => {
+                            progressBar.remove();
+                        }, 500);
+                    }
+                    resolve();
+                };
+
+                img.onerror = () => {
+                    img.src = '/static/images/error.svg';
+                    img.style.background = '#f5f5f5';
+                    img.style.display = 'block';
+                    loadedImages++;
+                    resolve();
+                };
+
+                img.src = imageUrl;
+            });
+        }
+
+        // 修改进度恢复函数
+        async function restoreReadingProgress() {
+            if (!currentChapter || !currentChapter.comic_id) return;
+
+            try {
+                // 先从服务器获取进度
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/reader/comics/${currentChapter.comic_id}/progress`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                let scrollTarget = 0;
+                
+                if (response.ok) {
+                    const serverProgress = await response.json();
+                    
+                    // 如果是当前章节，准备恢复滚动位置
+                    if (serverProgress.current_chapter === parseInt(chapterId)) {
+                        scrollTarget = (serverProgress.scroll_position / 100) * 
+                            (document.documentElement.scrollHeight - window.innerHeight);
+                    }
+                }
+
+                // 如果服务器获取失败或不是当前章节，尝试使用本地存储
+                const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
+                if (progress[currentChapter.comic_id]) {
+                    const chapterProgress = progress[currentChapter.comic_id];
+                    if (chapterProgress.chapterId === parseInt(chapterId)) {
+                        scrollTarget = (chapterProgress.scrollPosition / 100) * 
+                            (document.documentElement.scrollHeight - window.innerHeight);
+                    }
+                }
+
+                // 如果有需要恢复的进度，设置滚动位置
+                if (scrollTarget > 0) {
+                    // 清除之前的定时器
+                    if (progressRestoreTimeout) {
+                        clearTimeout(progressRestoreTimeout);
+                    }
+                    
+                    // 设置新的定时器，确保在图片加载后能正确滚动
+                    progressRestoreTimeout = setTimeout(() => {
+                        window.scrollTo({
+                            top: scrollTarget,
+                            behavior: 'instant'
+                        });
+                    }, 100);
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Error restoring reading progress:', error);
+                return false;
+            }
+        }
+
         // 修改加载章节数据的函数
         async function loadChapterData() {
             if (!chapterId) return;
@@ -530,52 +821,6 @@
             }
         }
 
-        // 修改恢复阅读进度的函数
-        async function restoreReadingProgress() {
-            if (!currentChapter || !currentChapter.comic_id) return;
-
-            try {
-                // 先从服务器获取进度
-                const token = localStorage.getItem('token');
-                const response = await fetch(`/api/reader/comics/${currentChapter.comic_id}/progress`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (response.ok) {
-                    const serverProgress = await response.json();
-                    
-                    // 如果是当前章节，恢复滚动位置
-                    if (serverProgress.current_chapter === parseInt(chapterId)) {
-                        const scrollPosition = (serverProgress.scroll_position / 100) * 
-                            (document.documentElement.scrollHeight - window.innerHeight);
-                        window.scrollTo({
-                            top: scrollPosition,
-                            behavior: 'instant'
-                        });
-                        return;
-                    }
-                }
-
-                // 如果服务器获取失败或不是当前章节，尝试使用本地存储
-                const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
-                if (progress[currentChapter.comic_id]) {
-                    const chapterProgress = progress[currentChapter.comic_id];
-                    if (chapterProgress.chapterId === parseInt(chapterId)) {
-                        const scrollPosition = (chapterProgress.scrollPosition / 100) * 
-                            (document.documentElement.scrollHeight - window.innerHeight);
-                        window.scrollTo({
-                            top: scrollPosition,
-                            behavior: 'instant'
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Error restoring reading progress:', error);
-            }
-        }
-
         // 修改页面加载时的初始化顺序
         window.addEventListener('load', async () => {
             const token = localStorage.getItem('token');
@@ -645,11 +890,17 @@
             }
         });
 
-        // 修改加载图片函数
-        async function loadChapterImages(chapterId) {
-            const token = localStorage.getItem('token');
+        // 预加载下一章节的前几张图片
+        async function preloadNextChapter() {
+            if (!currentChapter || !chaptersData) return;
+            
+            const currentIndex = chaptersData.findIndex(chapter => chapter.id === parseInt(chapterId));
+            if (currentIndex === -1 || currentIndex === chaptersData.length - 1) return;
+
+            const nextChapter = chaptersData[currentIndex + 1];
             try {
-                const response = await fetch(`/api/chapters/${chapterId}`, {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/chapters/${nextChapter.id}`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -657,75 +908,32 @@
 
                 if (response.ok) {
                     const chapterData = await response.json();
-                    const container = document.getElementById('readerContainer');
-                    container.innerHTML = ''; // 清空容器
-
-                    // 获取保存的进度
-                    const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
-                    const savedProgress = progress[currentChapter.comic_id];
-                    const savedScrollPercent = savedProgress && 
-                                             savedProgress.chapterId === parseInt(chapterId) ? 
-                                             savedProgress.scrollPosition : 0;
-
-                    // 添加图片
                     if (Array.isArray(chapterData.images) && chapterData.images.length > 0) {
-                        const imagePromises = chapterData.images.map((imageUrl, index) => {
-                            return new Promise((resolve) => {
-                                if (imageUrl && typeof imageUrl === 'string') {
-                                    const img = document.createElement('img');
-                                    img.src = imageUrl;
-                                    img.className = 'manga-image';
-                                    img.alt = `第${index + 1}页`;
-                                    img.loading = 'lazy';
-                                    img.style.width = `${localStorage.getItem('mangaImageWidth') || '400'}px`;
-                                    
-                                    img.onload = () => {
-                                        resolve();
-                                        // 在第一张图片加载完成后，计算并滚动到保存的位置
-                                        if (needRestoreProgress && index === 0) {
-                                            setTimeout(() => {
-                                                const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-                                                const scrollPosition = (savedScrollPercent / 100) * totalHeight;
-                                                window.scrollTo({
-                                                    top: scrollPosition,
-                                                    behavior: 'instant'
-                                                });
-                                                needRestoreProgress = false;  // 防止重复滚动
-                                            }, 100);
-                                        }
-                                    };
-                                    
-                                    img.onerror = function() {
-                                        this.src = '/static/images/error.svg';
-                                        this.style.background = '#f5f5f5';
-                                        resolve();
-                                    };
-                                    
-                                    container.appendChild(img);
-                                } else {
-                                    resolve();
-                                }
-                            });
+                        // 预加载前3张图片
+                        chapterData.images.slice(0, 3).forEach(imageUrl => {
+                            const img = new Image();
+                            img.src = imageUrl;
                         });
-
-                        // 等待所有图片开始加载
-                        await Promise.all(imagePromises);
-                    } else {
-                        container.innerHTML += '<div class="error">本章节暂无图片</div>';
                     }
                 }
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Error preloading next chapter:', error);
             }
         }
 
         // 修改保存进度函数
-        async function saveReadingProgress(chapterId, chapterTitle) {
+        async function saveReadingProgress(chapterId, chapterTitle, force = false) {
             if (!currentChapter || !currentChapter.comic_id) return;
             
             const scrollPosition = window.scrollY;
             const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
             const scrollPercent = totalHeight > 0 ? Math.round((scrollPosition / totalHeight) * 100) : 0;
+            
+            // 如果进度相同且不是强制保存，则不重复保存
+            const currentProgress = `${chapterId}-${scrollPercent}`;
+            if (!force && currentProgress === lastSavedProgress) {
+                return;
+            }
             
             // 保存到本地存储
             const progress = JSON.parse(localStorage.getItem('readingProgress') || '{}');
@@ -748,6 +956,7 @@
             }
             
             localStorage.setItem('readingProgress', JSON.stringify(progress));
+            lastSavedProgress = currentProgress;
 
             // 同步到服务器
             try {
@@ -887,6 +1096,33 @@
 
         document.getElementById('readerSettings').addEventListener('touchend', function(e) {
             e.stopPropagation();
+        });
+
+        // 修改滚动事件处理
+        function setupProgressTracking() {
+            window.addEventListener('scroll', () => {
+                if (progressSaveTimeout) {
+                    clearTimeout(progressSaveTimeout);
+                }
+                
+                progressSaveTimeout = setTimeout(() => {
+                    if (currentChapter) {
+                        saveReadingProgress(chapterId, currentChapter.title);
+                    }
+                }, 1000); // 延迟1秒保存，避免频繁保存
+            });
+
+            // 页面关闭前强制保存一次进度
+            window.addEventListener('beforeunload', () => {
+                if (currentChapter) {
+                    saveReadingProgress(chapterId, currentChapter.title, true);
+                }
+            });
+        }
+
+        // 页面初始化时设置进度跟踪
+        document.addEventListener('DOMContentLoaded', () => {
+            setupProgressTracking();
         });
     </script>
 </body>
