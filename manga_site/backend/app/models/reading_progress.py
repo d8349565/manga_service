@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, Index
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, Index, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.db.base import Base
@@ -10,6 +10,7 @@ class ReadingProgress(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     comic_id = Column(Integer, ForeignKey("comics.id"))
     chapter_id = Column(Integer, ForeignKey("chapters.id"))
+    scroll_position = Column(Float, default=0)
     last_read_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     user = relationship("User", backref="reading_progress")

@@ -1,0 +1,16 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/backend/uploads
+      - ./static:/app/backend/static
+      - .:/app/backend
+      - sqlite_data:/app/backend/data
+    restart: always
+
+volumes:
+  sqlite_data:
