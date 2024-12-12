@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
-from app.api.endpoints import auth, comics, chapters, reader
+from app.api.endpoints import auth, comics, chapters, reader, users
 from app.db.base import Base, engine
 import socket
 
@@ -26,6 +26,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(comics.router, prefix="/api/comics", tags=["comics"])
 app.include_router(chapters.router, prefix="/api/chapters", tags=["chapters"])
 app.include_router(reader.router, prefix="/api/reader", tags=["reader"])
+app.include_router(users.router, prefix="/api/users", tags=["users"])
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
