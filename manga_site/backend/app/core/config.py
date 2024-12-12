@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = "sqlite:///./manga.db"
     
-    ADMIN_REGISTER_KEY: str = "your-secret-admin-key"  # 用于注册管理员的密钥
+    ADMIN_REGISTER_KEY: str = "d8349565"  # 用于注册管理员的密钥
     
     class Config:
         case_sensitive = True
