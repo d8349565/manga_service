@@ -38,8 +38,9 @@
 
         .nav-menu {
             display: flex;
-            gap: 2rem;
+            gap: 1rem;
             align-items: center;
+            white-space: nowrap;
         }
 
         .nav-link {
@@ -49,6 +50,7 @@
             padding: 0.5rem 1rem;
             border-radius: 4px;
             transition: background-color 0.2s;
+            white-space: nowrap;
         }
 
         .nav-link:hover {
@@ -60,6 +62,7 @@
             align-items: center;
             gap: 1rem;
             position: relative;
+            white-space: nowrap;
         }
 
         .user-avatar {
@@ -109,12 +112,20 @@
             font-weight: bold;
             margin-bottom: 10px;
             text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 20px;
         }
 
         .comic-author {
             color: #666;
             margin-bottom: 15px;
             text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 20px;
         }
 
         .comic-description {
@@ -156,12 +167,18 @@
             text-decoration: none;
             display: block;
             margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .chapter-number {
             color: #718096;
             font-size: 12px;
             font-weight: normal;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .chapter-item.read {
@@ -292,6 +309,7 @@
             padding: 0.5rem 0;
             display: none;
             min-width: 150px;
+            white-space: nowrap;
         }
 
         .user-profile:hover .user-menu {
@@ -304,6 +322,9 @@
             text-decoration: none;
             display: block;
             transition: background-color 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .menu-item:hover {

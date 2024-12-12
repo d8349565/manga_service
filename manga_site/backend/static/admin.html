@@ -38,8 +38,9 @@
 
         .nav-menu {
             display: flex;
-            gap: 2rem;
+            gap: 1rem;
             align-items: center;
+            white-space: nowrap;
         }
 
         .nav-link {
@@ -49,6 +50,7 @@
             padding: 0.5rem 1rem;
             border-radius: 4px;
             transition: background-color 0.2s;
+            white-space: nowrap;
         }
 
         .nav-link:hover {
@@ -65,6 +67,7 @@
             align-items: center;
             gap: 1rem;
             position: relative;
+            white-space: nowrap;
         }
 
         .user-avatar {
@@ -90,6 +93,7 @@
             padding: 0.5rem 0;
             display: none;
             min-width: 150px;
+            white-space: nowrap;
         }
 
         .user-profile:hover .user-menu {
@@ -102,6 +106,9 @@
             text-decoration: none;
             display: block;
             transition: background-color 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .menu-item:hover {
@@ -165,6 +172,36 @@
             padding: 1rem;
             text-align: left;
             border-bottom: 1px solid #eee;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px; /* 限制单元格最大宽度 */
+        }
+
+        /* 为不同列设置不同的宽度 */
+        .users-table th:nth-child(1),
+        .users-table td:nth-child(1) {
+            width: 60px; /* ID列 */
+        }
+
+        .users-table th:nth-child(2),
+        .users-table td:nth-child(2) {
+            width: 40%; /* 用户名列 */
+        }
+
+        .users-table th:nth-child(3),
+        .users-table td:nth-child(3) {
+            width: 100px; /* 角色列 */
+        }
+
+        .users-table th:nth-child(4),
+        .users-table td:nth-child(4) {
+            width: 80px; /* 状态列 */
+        }
+
+        .users-table th:nth-child(5),
+        .users-table td:nth-child(5) {
+            width: 100px; /* 操作列 */
         }
 
         .users-table th {
