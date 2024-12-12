@@ -185,28 +185,11 @@
         }
 
         .admin-controls {
-            margin-top: 8px;
             display: none;
-            gap: 4px;
-            justify-content: center;
-        }
-
-        .chapter-item:hover .admin-controls {
-            display: flex;
         }
 
         .admin-btn {
-            padding: 3px 8px;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 11px;
-            opacity: 0.8;
-            transition: opacity 0.2s;
-        }
-
-        .admin-btn:hover {
-            opacity: 1;
+            display: none;
         }
 
         .loading {
@@ -347,7 +330,7 @@
                 <span id="userName"></span>
                 <span id="adminBadge" class="admin-badge" style="display: none;">管理员</span>
                 <div class="user-menu">
-                    <a href="/static/settings.html" class="menu-item">个人设置</a>
+                    <!-- <a href="/static/settings.html" class="menu-item">个人设置</a> -->
                     <a href="/static/admin.html" class="menu-item admin-only" style="display: none;">用户管理</a>
                     <a href="#" class="menu-item logout" onclick="logout()">退出登录</a>
                 </div>
@@ -507,12 +490,6 @@
                         ${chapter.title}
                     </a>
                     <div class="chapter-number">第 ${chapter.chapter_number} 话</div>
-                    ${isAdmin ? `
-                        <div class="admin-controls">
-                            <button class="admin-btn edit-btn" onclick="editChapter(${chapter.id})">编辑</button>
-                            <button class="admin-btn delete-btn" onclick="deleteChapter(${chapter.id})">删除</button>
-                        </div>
-                    ` : ''}
                 `;
                 chaptersList.appendChild(chapterElement);
             });
@@ -526,33 +503,6 @@
         function toggleSort() {
             isAscending = !isAscending;
             renderChapters();
-        }
-
-        async function deleteChapter(chapterId) {
-            if (!confirm('确定要删除这个章节吗？')) return;
-            
-            const token = localStorage.getItem('token');
-            try {
-                const response = await fetch(`/api/chapters/${chapterId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                
-                if (response.ok) {
-                    loadChapters();
-                } else {
-                    alert('删除失败');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('删除出错');
-            }
-        }
-
-        function editChapter(chapterId) {
-            window.location.href = `/static/edit-chapter.html?chapter_id=${chapterId}`;
         }
 
         function loadReadingProgress(readingProgress) {

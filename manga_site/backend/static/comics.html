@@ -138,16 +138,7 @@
         }
 
         .add-comic-btn {
-            background: #667eea;
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            text-decoration: none;
-            transition: background-color 0.2s;
-        }
-
-        .add-comic-btn:hover {
-            background: #5a6fe4;
+            display: none;
         }
 
         .comics-grid {
@@ -239,7 +230,7 @@
                 <span id="userName"></span>
                 <span id="adminBadge" class="admin-badge" style="display: none;">管理员</span>
                 <div class="user-menu">
-                    <a href="/static/settings.html" class="menu-item">个人设置</a>
+                    <!-- <a href="/static/settings.html" class="menu-item">个人设置</a> -->
                     <a href="/static/admin.html" class="menu-item admin-only" style="display: none;">用户管理</a>
                     <a href="#" class="menu-item logout" onclick="logout()">退出登录</a>
                 </div>
@@ -250,7 +241,6 @@
     <main class="main-content">
         <div class="page-title">
             <h1>漫画列表</h1>
-            <a href="/static/admin.html" class="add-comic-btn admin-only" style="display: none;">添加漫画</a>
         </div>
         <div class="comics-grid" id="comicsGrid"></div>
     </main>
