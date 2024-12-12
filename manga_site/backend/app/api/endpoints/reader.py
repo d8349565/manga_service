@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
+import pytz
 from app.db.session import get_db
 from app.models.comic import Comic
 from app.models.chapter import Chapter
@@ -9,6 +10,9 @@ from app.models.user import User
 from app.models.reading_progress import ReadingProgress
 from app.core.deps import get_current_user
 from pydantic import BaseModel
+
+# 设置中国时区
+CN_TIMEZONE = pytz.timezone('Asia/Shanghai')
 
 router = APIRouter()
 
@@ -130,6 +134,9 @@ async def update_reading_progress(
     """
     更新用户的阅读进度
     """
+    # 获取当前中国时间
+    current_time = datetime.now(CN_TIMEZONE).replace(tzinfo=None)
+    
     # 查找现有进度记录
     progress = db.query(ReadingProgress).filter(
         ReadingProgress.user_id == current_user.id,
@@ -140,14 +147,15 @@ async def update_reading_progress(
         # 更新现有记录
         progress.chapter_id = progress_data.chapter_id
         progress.scroll_position = progress_data.scroll_position
-        progress.last_read_at = datetime.utcnow()
+        progress.last_read_at = current_time
     else:
         # 创建新记录
         progress = ReadingProgress(
             user_id=current_user.id,
             comic_id=progress_data.comic_id,
             chapter_id=progress_data.chapter_id,
-            scroll_position=progress_data.scroll_position
+            scroll_position=progress_data.scroll_position,
+            last_read_at=current_time
         )
         db.add(progress)
     
