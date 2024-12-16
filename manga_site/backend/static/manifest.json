@@ -1,0 +1,17 @@
+{
+  "name": "漫画阅读器",
+  "short_name": "漫画",
+  "description": "在线漫画阅读应用",
+  "start_url": "/static/comics.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1a1a1a",
+  "icons": [
+    {
+      "src": "/static/icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+} 
