@@ -9,7 +9,7 @@ class Chapter(Base):
     id = Column(Integer, primary_key=True, index=True)
     comic_id = Column(Integer, ForeignKey("comics.id"))
     chapter_number = Column(Integer)
-    title = Column(String)
+    title = Column(String(255))
     images = Column(Text)
 
     comic = relationship("Comic", back_populates="chapters")

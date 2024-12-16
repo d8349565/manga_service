@@ -9,8 +9,12 @@ services:
       - ./uploads:/app/backend/uploads
       - ./static:/app/backend/static
       - .:/app/backend
-      - sqlite_data:/app/backend/data
+    environment:
+      - MYSQL_SERVER=192.168.110.73
+      - MYSQL_USER=comic
+      - MYSQL_PASSWORD=YyzK2jPEaTKKAhjs
+      - MYSQL_DB=comic
     restart: always
 
 volumes:
-  sqlite_data:
+  mysql_data:

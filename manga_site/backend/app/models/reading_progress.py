@@ -15,14 +15,16 @@ class ReadingProgress(Base):
     comic_id = Column(Integer, ForeignKey("comics.id"))
     chapter_id = Column(Integer, ForeignKey("chapters.id"))
     scroll_position = Column(Float, default=0)
-    last_read_at = Column(DateTime, default=lambda: datetime.now(CN_TIMEZONE).replace(tzinfo=None), 
-                         onupdate=lambda: datetime.now(CN_TIMEZONE).replace(tzinfo=None))
+    last_read_at = Column(
+        DateTime, 
+        default=lambda: datetime.now(CN_TIMEZONE).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(CN_TIMEZONE).replace(tzinfo=None)
+    )
     
     user = relationship("User", backref="reading_progress")
     comic = relationship("Comic", backref="reading_progress")
     chapter = relationship("Chapter", backref="reading_progress")
 
-    # 添加复合索引以提高查询效率
     __table_args__ = (
         Index('idx_user_comic', user_id, comic_id),
-    ) 
+    )
