@@ -10,7 +10,7 @@
 
 ### 1. 用户系统
 
-- 用户注册与登录
+- 用户注册与登录(登入页面：http://localhost:8812/static/login.html)
 - 用户 token 认证
 - 用户角色管理(普通用户/管理员)
 
@@ -150,3 +150,4 @@ python main.py
 
 1. 首次使用需要重新注册管理员账户密码（默认为 账户 admin 密码 admin）
 1. docker 部署、内网穿透、域名、ddns 等设置请自行搜索完成。
+1. 项目地址：https://github.com/d8349565/manga_service
