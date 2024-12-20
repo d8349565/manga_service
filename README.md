@@ -96,7 +96,7 @@ backend/
 
 1. 构建并启动服务：
 ```bash
-git clone https://github.com/d8349565/comic.git
+git clone https://github.com/d8349565/manga_service.git
 cd backend
 docker-compose up -d
 ```
