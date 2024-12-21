@@ -14,30 +14,6 @@ from app.models.comic import Comic
 router = APIRouter()
 
 
-@router.get("/{comic_id}/chapters")
-async def get_chapters(comic_id: int, db: Session = Depends(get_db)):
-    # 只查询需要的字段,避免加载整个对象
-    chapters = db.query(
-        Chapter.chapter_number,
-        Chapter.comic_id, 
-        Chapter.id,
-        Chapter.title
-    ).filter(
-        Chapter.comic_id == comic_id
-    ).all()
-    
-    # 直接返回查询结果,不需要额外处理
-    return [
-        {
-            "chapter_number": chapter[0],
-            "comic_id": chapter[1], 
-            "id": chapter[2],
-            "title": chapter[3]
-        }
-        for chapter in chapters
-    ]
-
-
 @router.post("/{comic_id}/chapters")
 async def create_chapter(
     comic_id: int,

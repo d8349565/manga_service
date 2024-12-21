@@ -124,7 +124,22 @@ async def get_comic_chapters(
     """
     获取漫画的所有章节
     """
-    chapters = db.query(Chapter).filter(
+    # 优化查询，只获取需要的字段
+    chapters = db.query(
+        Chapter.chapter_number,
+        Chapter.comic_id, 
+        Chapter.id,
+        Chapter.title
+    ).filter(
         Chapter.comic_id == comic_id
     ).order_by(Chapter.chapter_number).all()
-    return chapters
+    
+    return [
+        {
+            "chapter_number": chapter[0],
+            "comic_id": chapter[1], 
+            "id": chapter[2],
+            "title": chapter[3]
+        }
+        for chapter in chapters
+    ]
